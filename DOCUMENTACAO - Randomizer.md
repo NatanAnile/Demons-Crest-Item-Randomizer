@@ -1,5 +1,6 @@
 # Demon's Crest — nosso randomizer (documentação)
 
+
 Documentação própria do Neitan + Claude. Começou em 25/09/2026. **Separada dos relatórios pro Fred, que não
 recebem mais nada.** Detalhes de engenharia reversa do motor ficam no `CONTEXTO.md` e em
 `DemonsCrest Editor\DOCUMENTACAO.md`. Este arquivo registra o que o NOSSO código faz, as decisões e o histórico.
