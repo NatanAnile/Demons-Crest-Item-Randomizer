@@ -16,6 +16,12 @@ Ganchos (código no banco $C2):
   84:88E8  STZ $1E51 / STZ $1E52 do jogo novo: grava a crest inicial, zera FLAGS e escolhe a arma (como o menu, 84:8DBE)
   84:938A  menu, "o jogador tem o item do cursor?" (84:9381): o código 0 (a Fire, a arma base) era sempre "tem"; agora
            só com FLAGS bit 0. Sem a Fire Crest, a Fire não pode ser escolhida no menu (30/09, Neitan)
+  80:BB44  ida pro mapa (JSL 84:8938 = zera forma/arma: o voo no mapa é com o Firebrand normal): guarda forma e arma
+           em SAVE antes de zerar (Neitan, 04/10: toda fase, loja e minigame começava com o Firebrand normal e a Fire
+           selecionada, que sem a Fire Crest nem atira; medido com lua/quem_grava_forma.lua: 84:893A zera ao ir pro
+           mapa e nada devolve ao entrar)
+  85:B10A  mapa -> destino (LDA $E1C5,Y / STA $0EA7, logo depois de gravar a área em $8D): devolve a forma e a arma
+           guardadas e recalcula as habilidades (80:DF94) antes da área carregar, como o jogo novo faz com a Earth
   84:8FEF  menu, antes de desenhar os ícones (REP #$30 / STZ $1E18): sem a Fire Crest, põe na fila de VRAM do jogo
            ($0500,Y / $0081) as peças de quadro vazio (1C34/1C35/1C44/1C45) em cima do ícone da Fire (mapa de tiles
            $4800, linha 4 coluna 3 = $4883; medido 30/09 com lua/menu_shot.lua). O ícone da Fire vem do desenho fixo
@@ -24,6 +30,7 @@ from asm65816 import Asm
 
 BASE = 0xC28000
 FLAGS = 0x7E1F92            # bit 0 = Fire Crest (DCOR); o resto livre (Head Butt vai aqui)
+SAVE = 0x7E1F98             # forma; +1 = arma | 80 (80 = guardado): a crest de antes do mapa
 FIRE_SUB = 0x10
 FIRE_ID = FIRE_SUB << 8 | 0x48
 FIRE_TEXT = ['YOU GOT "FIRE CREST".', None, 'NOW YOU CAN', 'LIGHT TORCHES', 'AND DEAL BASIC DAMAGE']
@@ -120,6 +127,25 @@ def apply(rom, start):
     a.op('RTL')
     a.label('blank0'); a.b += bytes.fromhex('341c351c')                      # quadro vazio, linha de cima
     a.label('blank1'); a.b += bytes.fromhex('441c451c')                      # e de baixo
+    # --- ida pro mapa: guarda forma/arma e segue pra rotina que zera (84:8938 termina num JML 80:DF94 / RTL)
+    a.label('map_save')
+    a.op('PHP'); a.op('SEP', 'imm8', 0x30)
+    a.op('LDA', 'abs', 0x1002); a.op('STA', 'long', SAVE)
+    a.op('LDA', 'abs', 0x1054); a.op('ORA', 'imm8', 0x80); a.op('STA', 'long', SAVE + 1)
+    a.op('PLP'); a.op('JML', 'long', 0x848938)
+    # --- mapa -> destino: o que 85:B10A fazia (A 8 bits) e devolve a crest guardada
+    a.label('map_restore')
+    a.op('LDA', 'absy', 0xE1C5); a.op('STA', 'abs', 0x0EA7)
+    a.op('LDA', 'long', SAVE + 1); a.op('AND', 'imm8', 0x80); a.br('BEQ', 'mr_out')       # nada guardado
+    a.op('LDA', 'long', SAVE + 1); a.op('AND', 'imm8', 0x7F); a.op('STA', 'abs', 0x1054)
+    a.op('LSR', 'acc'); a.op('STA', 'abs', 0x1038)
+    a.op('LDA', 'long', SAVE); a.op('STA', 'abs', 0x1002)
+    a.op('LDA', 'imm8', 0x00); a.op('STA', 'long', SAVE + 1)                           # usado
+    a.op('PHB'); a.op('LDA', 'imm8', 0x81); a.op('PHA'); a.op('PLB')                   # 80:DF98 lê $81:B2EB
+    a.op('JSL', 'long', 0x80DF94)
+    a.op('PLB')
+    a.label('mr_out')
+    a.op('RTL')
     a.label('text')
     a.b += encode(FIRE_TEXT)
     code = a.resolve()
@@ -136,7 +162,9 @@ def apply(rom, start):
                                      (0x82EAC2, 'b954d79d3b00', 'msg', 6, 'jsl'),
                                      (0x8488E8, '9c511e9c521e', 'start', 6, 'jsl'),
                                      (0x84938A, '29ff00f02c', 'menu', 5, 'jml'),
-                                     (0x848FEF, 'c2309c181e', 'menu_icons', 5, 'jsl')):
+                                     (0x848FEF, 'c2309c181e', 'menu_icons', 5, 'jsl'),
+                                     (0x80BB44, '22388984', 'map_save', 4, 'jsl'),
+                                     (0x85B10A, 'b9c5e18da70e', 'map_restore', 6, 'jsl')):
         rom.expect(addr, bytes.fromhex(want))
         rom.put(addr, bytes((0x5C,)) + L[lab].to_bytes(3, 'little') + bytes((0xEA,)) * (n - 4) if kind == 'jml' else jsl(L[lab], n))
     return [f'crest inicial: {start}; Fire Crest = item {FIRE_ID:04X}; código {BASE >> 16:02X}:{BASE & 0xFFFF:04X}-'

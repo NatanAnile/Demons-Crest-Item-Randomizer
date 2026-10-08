@@ -1,0 +1,41 @@
+Traceback (most recent call last):
+  File "tkinter\__init__.py", line 1967, in __call__
+  File "tkinter\__init__.py", line 861, in callit
+  File "G:\IA_DAS_LIVES\Demon's Rando\DCOR - Demons Crest Open Randomizer\data\dcor_gui.py", line 2162, in refit
+    self.relayout()
+  File "G:\IA_DAS_LIVES\Demon's Rando\DCOR - Demons Crest Open Randomizer\data\dcor_gui.py", line 2133, in relayout
+    self.apply_scale(s)
+  File "G:\IA_DAS_LIVES\Demon's Rando\DCOR - Demons Crest Open Randomizer\data\dcor_gui.py", line 2107, in apply_scale
+    w.rescale()
+  File "G:\IA_DAS_LIVES\Demon's Rando\DCOR - Demons Crest Open Randomizer\data\dcor_gui.py", line 1073, in rescale
+    self.draw()
+  File "G:\IA_DAS_LIVES\Demon's Rando\DCOR - Demons Crest Open Randomizer\data\dcor_gui.py", line 1093, in draw
+    round_rect(self, x + 1, 1, x + self.fw + 2 * p - 2, self.fh + 2 * p - 2, 6, fill=SEL, outline=ACCENT_HI)
+  File "G:\IA_DAS_LIVES\Demon's Rando\DCOR - Demons Crest Open Randomizer\data\dcor_gui.py", line 675, in round_rect
+    return cv.create_polygon(pts, smooth=True, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "tkinter\__init__.py", line 2875, in create_polygon
+  File "tkinter\__init__.py", line 2851, in _create
+  File "tkinter\__init__.py", line 1546, in _options
+  File "tkinter\__init__.py", line 106, in _cnfmerge
+RecursionError: maximum recursion depth exceeded in __instancecheck__
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "dcor_launcher.py", line 27, in main
+    dcor_gui.main()
+  File "G:\IA_DAS_LIVES\Demon's Rando\DCOR - Demons Crest Open Randomizer\data\dcor_gui.py", line 2369, in main
+    root.mainloop()
+  File "tkinter\__init__.py", line 1504, in mainloop
+  File "tkinter\__init__.py", line 1971, in __call__
+  File "tkinter\__init__.py", line 1687, in _report_exception
+  File "tkinter\__init__.py", line 2425, in report_callback_exception
+  File "traceback.py", line 124, in print_exception
+  File "traceback.py", line 728, in __init__
+  File "traceback.py", line 433, in _extract_from_extended_frame_gen
+  File "traceback.py", line 318, in line
+  File "linecache.py", line 30, in getline
+  File "linecache.py", line 46, in getlines
+  File "linecache.py", line 93, in updatecache
+RecursionError: maximum recursion depth exceeded while calling a Python object

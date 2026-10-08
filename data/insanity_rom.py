@@ -9,6 +9,7 @@ import os
 
 from rom_expand import expand, fix_checksum
 import fire_crest
+import head_butt
 from asm65816 import Asm
 import insanity_gfx
 
@@ -235,9 +236,11 @@ def merge_shared_screens(data, parsed):
             s['grade'] = [list(row) for row in merged]
 
 
-def write(vanilla, placement, rng, go='vellum', patches=(), start=None, skip_somulo=False):
+def write(vanilla, placement, rng, go='vellum', patches=(), start=None, skip_somulo=False, vanilla_access=False,
+          headbutt=False):
     """Devolve (ROM 4 MB, ids por check). start = crest inicial sorteada (None = jogo original: Fire desde o início).
-    skip_somulo = começa na área 1 com o Somulo vencido e o item dele (progress)."""
+    skip_somulo = começa na área 1 com o Somulo vencido e o item dele (progress). vanilla_access = fases 5 e 6 só
+    depois de STAGE56_BOSSES (progress, mapa). headbutt = cabeçada só com a Skull equipada (head_butt.py)."""
     data, _ = expand(vanilla)
     data = bytearray(data)
     write.map_report = apply_map_patches(data, patches)
@@ -335,9 +338,10 @@ def write(vanilla, placement, rng, go='vellum', patches=(), start=None, skip_som
     rom.put(0x838A3D, (SOMULO_HEAD_HP,))
     # crest inicial Fire = jogo original (Fire desde o começo, sem a Fire Crest na pool): nenhum gancho
     write.fire_report = fire_crest.apply(rom, start) if start and start != 'Fire Crest' else []
-    code = boss_exit(rom, code, g, castle_req(go, ids), start, skip_somulo)
+    write.head_report = head_butt.apply(rom) if headbutt else []          # Head Butt como item (03/10)
+    code = boss_exit(rom, code, g, castle_req(go, ids), start, skip_somulo, vanilla_access, headbutt)
     rom.put(CODE, code)
-    gfx_lines = insanity_gfx.apply(rom.b, vanilla, ids)   # itens com gráfico/paleta próprios (BF:D600)
+    gfx_lines = insanity_gfx.apply(rom.b, vanilla, ids, skip_somulo)   # itens com gráfico/paleta próprios (BF:D600)
     fix_checksum(rom.b)
     write.gfx_report = gfx_lines
     return bytes(rom.b), ids
@@ -397,11 +401,50 @@ def somulo_spawn(code, at):
     return at
 
 
+# Select = dano de segurança (Neitan, 08/10: sair de um softlock, ex.: Hippogriff 2 sem cabeçada). Zerar o HP na RAM não
+# mata o Firebrand; quem mata é o estado 0C (tomou dano, 80:E55F): HP ($1061, palavra; inteiro em $1062) -= dano
+# ($1067) e, se der 0, estado 10 = a morte normal do jogo (sai da fase como numa morte de verdade). Cada aperto do
+# Select (borda, não segurar) deixa o HP na metade do atual (arredondado pra baixo) e entra no 0C com dano 0: com 1 de
+# HP vai a 0 e morre. Vários apertos pra morrer = proteção contra aperto sem querer. Só nos estados de controle
+# (chão 02, pulo 04, planar 06, nadar 14) e fora da piscada pós-dano ($103C = 0).
+SELECT_PREV = 0x7E1F9A                 # Select no quadro anterior (borda)
+SELECT_CODE = 0xC48000                 # banco próprio: o C0 (CODE) não tem mais espaço antes da LOCBIT
+SELECT_STATES = (0x02, 0x04, 0x06, 0x14)
+
+
+def select_kill(rom):
+    a = Asm(SELECT_CODE)
+    a.op('PHP'); a.op('SEP', 'imm8', 0x30)
+    a.op('LDA', 'long', SELECT_PREV); a.op('TAX')
+    a.op('LDA', 'long', 0x000091); a.op('AND', 'imm8', 0x20); a.op('STA', 'long', SELECT_PREV)   # $91 & 20 = Select
+    a.br('BEQ', 'out')
+    a.op('CPX', 'imm8', 0x00); a.br('BNE', 'out')                                          # já estava apertado
+    a.op('LDA', 'long', 0x7E1000); a.br('BEQ', 'out')                                       # Firebrand em cena
+    a.op('LDA', 'long', 0x7E103C); a.br('BNE', 'out')                                       # piscando (pós-dano)
+    a.op('LDA', 'long', 0x7E1005)
+    for st in SELECT_STATES:
+        a.op('CMP', 'imm8', st); a.br('BEQ', 'hit')
+    a.br('BRA', 'out')
+    a.label('hit')
+    a.op('REP', 'imm8', 0x20)
+    a.op('LDA', 'long', 0x7E1061); a.op('LSR', 'acc'); a.op('AND', 'imm16', 0xFF00); a.op('STA', 'long', 0x7E1061)
+    a.op('SEP', 'imm8', 0x20)
+    a.op('LDA', 'imm8', 0x00); a.op('STA', 'long', 0x7E1067)                               # dano 0 (já tirado acima)
+    a.op('LDA', 'imm8', 0x0C); a.op('STA', 'long', 0x7E1005)                               # tomou dano
+    a.label('out'); a.op('PLP'); a.op('RTL')
+    b = a.resolve()
+    o = rom.off(SELECT_CODE)
+    assert not any(rom.b[o:o + len(b)]), 'banco $C4 não está vazio'
+    rom.put(SELECT_CODE, b)
+    return SELECT_CODE
+
+
 def long3(a):
     return (a & 0xFF, a >> 8 & 0xFF, a >> 16)
 
 
-def boss_exit(rom, code, grewon_tramp, castle=None, start=None, skip_somulo=False):
+def boss_exit(rom, code, grewon_tramp, castle=None, start=None, skip_somulo=False, vanilla_access=False,
+              headbutt=False):
     def here():
         return CODE + len(code)
 
@@ -455,8 +498,9 @@ def boss_exit(rom, code, grewon_tramp, castle=None, start=None, skip_somulo=Fals
 
     # vigia (fim do laço de objetos, A/X 16 bits)
     sp = somulo_spawn(code, here()) if skip_somulo else None
+    sk = select_kill(rom)
     w = here()
-    body = bytearray()
+    body = bytearray((0x22,) + long3(sk))                                            # JSL Select (dano de segurança)
     if sp:
         body += bytes((0x22,) + long3(sp))                                           # JSL item do Somulo
     body += bytes((0xA9, 0x00, 0x00, 0x5B))                                          # LDA #0 / TCD (como o original)
@@ -506,7 +550,7 @@ def boss_exit(rom, code, grewon_tramp, castle=None, start=None, skip_somulo=Fals
                   (0x28, 0x5C, 0xAE, 0x86, 0x82))                                   # PHP / zera / PLP / JML 82:86AE
     rom.expect(0x828B4D, (0x22, 0xAE, 0x86, 0x82))
     rom.put(0x828B4D, (0x22,) + long3(c))
-    return progress(rom, code, castle, start, skip_somulo)
+    return progress(rom, code, castle, start, skip_somulo, vanilla_access, headbutt)
 
 
 # --- Progresso por LUGAR (25/09, teste da seed 2) ----------------------------------------------------------------
@@ -535,7 +579,10 @@ LOC_AREAS = {1: 0x0001,                    # Hippogriff 1
              52: 0x2000, 53: 0x2000, 54: 0x2000}   # Trio the Pago
 
 
-def progress(rom, code, castle=None, start=None, skip_somulo=False):
+STAGE56_LOC = 0x0002 | 0x1000 | 0x0010 | 0x0020 | 0x0040   # Arma 1, Ovnunu, Flame Lord, Flier 1, Arma 2 (LOC_AREAS)
+
+
+def progress(rom, code, castle=None, start=None, skip_somulo=False, vanilla_access=False, headbutt=False):
     """castle = None: castelo com os 5 vellums (código validado no jogo). Senão, lista (endereço, máscara) de
     castle_req: o mapa chama uma rotina que confere todas."""
     def here():
@@ -550,18 +597,22 @@ def progress(rom, code, castle=None, start=None, skip_somulo=False):
     #   nenhuma crest que dê (Fire Crest = FLAGS bit 0; Buster, Tornado, Claw, Demon Fire, Time = $1E51 & 8F), o
     #   teste responde "Hippogriff vencido" SEM ligar o LOC: não há cena nem Hippogriff, a área segue pra área 2
     #   (medido, lua/hippo1_test.lua). Voltando com uma dessas crests, a luta acontece. A 8 bits; Z=0 = vencido.
-    #   (Head Butt como item, no futuro: também pula enquanto não tiver o item.)
+    #   Head Butt como item (head_butt.py; Neitan, 04/10): em qualquer crest inicial, pula enquanto o jogador não tiver
+    #   a Skull ($1E53 & 10; a lógica V5 pede canHeadbutt = Skull). Ter basta: a cabeçada sai com ela equipada.
     def hippo1_hook(at):
         a = Asm(at)
         a.op('LDA', 'long', LOC); a.op('AND', 'imm8', 0x01); a.br('BNE', 'done')          # vencido de verdade
-        a.op('LDA', 'long', 0x7E1E51); a.op('AND', 'imm8', 0x8F); a.br('BNE', 'fight')     # tem crest de head butt
-        a.op('LDA', 'long', fire_crest.FLAGS); a.op('AND', 'imm8', 0x01); a.br('BNE', 'fight')   # tem a Fire Crest
+        if headbutt:
+            a.op('LDA', 'long', 0x7E1E53); a.op('AND', 'imm8', 0x10); a.br('BNE', 'fight')     # tem a Skull
+        else:
+            a.op('LDA', 'long', 0x7E1E51); a.op('AND', 'imm8', 0x8F); a.br('BNE', 'fight')     # tem crest de head butt
+            a.op('LDA', 'long', fire_crest.FLAGS); a.op('AND', 'imm8', 0x01); a.br('BNE', 'fight')   # tem a Fire Crest
         a.op('LDA', 'imm8', 0x01); a.op('RTL')                                              # pula: Z=0
         a.label('fight'); a.op('LDA', 'imm8', 0x00); a.op('RTL')                            # luta: Z=1
         a.label('done'); a.op('RTL')
         code.extend(a.resolve())
         return at
-    h1 = hippo1_hook(here()) if start == 'Earth Crest' else None
+    h1 = hippo1_hook(here()) if start == 'Earth Crest' or headbutt else None
     #   O Hippogriff 1 é decidido em DOIS lugares: 84:9902 (cena de abertura) e o portão de chefe da área 1 (entrada
     #   $81:8123 = HP 02, perto da arena), que é quem faz ele nascer. "Vencido" no portão = evento 14 = espera e sai
     #   pra área 2 (medido 30/09). Os dois usam o h1.
@@ -571,9 +622,11 @@ def progress(rom, code, castle=None, start=None, skip_somulo=False):
     a = Asm(gate)
     a.op('LDA', 'abs', 0x008D); a.op('AND', 'imm16', 0x00FF); a.op('TAX')          # área*2
     a.op('LDA', 'longx', LOCBIT); a.op('AND', 'long', LOC); a.br('BNE', 'done')      # lugar feito
-    if h1:                                                                          # área 1 com a Earth inicial
+    if h1:                                                       # área 1 com a Earth inicial ou o Head Butt como item
         a.op('CPX', 'imm16', 0x0002); a.br('BNE', 'todo')
         a.op('SEP', 'imm8', 0x20); a.op('JSL', 'long', h1); a.op('REP', 'imm8', 0x20); a.br('BEQ', 'todo')
+    else:                                                        # 08/10: sem isto TODO chefe do portão dava "vencido"
+        a.br('BRA', 'todo')
     a.label('done')
     a.op('LDA', 'abs', 0x0001); a.op('AND', 'imm16', 0x00FF); a.op('RTL')          # A = máscara original (TSB $0EAA)
     a.label('todo')
@@ -585,9 +638,24 @@ def progress(rom, code, castle=None, start=None, skip_somulo=False):
     # mapa: 85:A1EE -> Y = 3 (crest de bit 8, como o original), 0 (5 vellums: $E1D2[0] = 7F, com castelo)
     #                  ou 1 ($E1D2[1] = 3F: fases 1-6)
     rom.expect(0x85A1EE, bytes.fromhex('c220ad581e890100d035a003ad511e890001d018'))
+    # Acessibilidade Vanilla (0.3.2): no jogo original o mapa começa com as fases 1-4 (Y = FF: 85:AEED usa $37 = 0F)
+    # e as fases 5 e 6 abrem com Earth + Buster + Tornado + Claw + Air (85:A21D, $1E51 & 37) = Arma 1, Ovnunu,
+    # Flame Lord, Flier 1 e Arma 2. Aqui pelo LOC desses chefes (os itens são sorteados). Antes disso Y = FF também
+    # com o objetivo cumprido: o castelo só aparece junto (Y = 2, fases 1-4 + castelo, dispara a cena de 85:B0E2).
+    exit_ = bytes.fromhex('e2206b')                                                # SEP #$20 / RTL
+    if vanilla_access:
+        vt = here()
+        a = Asm(vt)
+        a.op('CPY', 'imm8', 0x03); a.br('BEQ', 'out')                              # Y = 3: como o original
+        a.op('LDA', 'long', LOC); a.op('AND', 'imm16', STAGE56_LOC); a.op('CMP', 'imm16', STAGE56_LOC)
+        a.br('BEQ', 'out')
+        a.op('LDY', 'imm8', 0xFF)                                                  # só as fases 1-4
+        a.label('out'); a.op('SEP', 'imm8', 0x20); a.op('RTL')
+        code += a.resolve()
+        exit_ = bytes((0x5C,) + long3(vt))                                         # JML (mesmo lugar do SEP/RTL)
     if castle is None:
         rom.put(0x85A1EE, bytes.fromhex('c220' 'a003' 'ad511e' '890001' 'd00f'
-                                        'ad561e' '291f00' 'a001' 'c91f00' 'd002' 'a000' 'e2206b'))
+                                        'ad561e' '291f00' 'a001' 'c91f00' 'd002' 'a000') + exit_)
     else:
         # castelo (dif. 1/4/5): Y = 1 (fases 1-6); Y = 0 ($E1D2[0] = 7F, com castelo) se todas as máscaras batem
         #   LDY #1 / {LDA long / AND #m / CMP #m / BNE fechado}... / LDY #0 / fechado: RTL   (A 16 bits, Y 8 bits)
@@ -598,7 +666,7 @@ def progress(rom, code, castle=None, start=None, skip_somulo=False):
             code += bytes((0xAF,) + long3(a) + (0x29, m & 0xFF, m >> 8, 0xC9, m & 0xFF, m >> 8, 0xD0, skip))
         code[cs - CODE:cs - CODE] = bytes((0xA0, 0x01))
         code += bytes((0xA0, 0x00, 0x6B))
-        new = bytes.fromhex('c220' 'a003' 'ad511e' '890001' 'd004') + bytes((0x22,) + long3(cs)) + bytes.fromhex('e2206b')
+        new = bytes.fromhex('c220' 'a003' 'ad511e' '890001' 'd004') + bytes((0x22,) + long3(cs)) + exit_
         rom.put(0x85A1EE, new + b'\xEA' * (30 - len(new)))
 
     # LOC = 0 no jogo novo (84:8906 LDA #4 / STA $1E50) e ao carregar senha (84:C17F STA $1E50 / STA $1062)

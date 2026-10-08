@@ -9,7 +9,7 @@ embaixo o cartão da Seed e o Gerar. Sem linha de ROM nem status: erro (ROM, ló
 do launcher (App.dialog; a do gerador do Metroid Fusion como referência). As últimas opções das duas guias e a guia
 aberta ficam no dcor_config.json (como o site do Archipelago guarda o último yaml).
   - Guia Simples: os presets de dificuldade (controles abaixo).
-  - Guia Avançado (gera desde 02/10; ADV_*, adv_resolve): preset (.json), dificuldade 1-5/Custom (marca as opções
+  - Guia Avançado (gera desde 02/10; ADV_*, adv_resolve): preset (.json, carregar/salvar), dificuldade 1-5/Custom (marca as opções
     como a da Simples), nível da lógica, acessibilidade, pool de itens, densidade, remoção de itens, HP disponível,
     objetivo, Starter Crest, Head Butt, Skip Somulo e Anti-Softlock. "Rando" = sorteado pela seed ao gerar.
     Acessibilidade Vanilla e Head Butt como item ainda não existem na ROM: ficam "(em breve)" na lista.
@@ -41,7 +41,7 @@ import tkinter.font as tkfont
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import insanity_rando as R  # noqa: E402
 
-VERSION = '0.3.1'
+VERSION = '0.3.2'
 VANILLA_SHA1 = '743d60ee1536b0c7c24dbb8ba39d14ed5937c0d5'   # Demon's Crest (USA), sem cabeçalho
 
 # Idioma (28/09): todo texto da janela vem de TEXTS[LANG] via tr(); trocar a bandeira troca na hora (App.set_lang).
@@ -89,10 +89,13 @@ TEXTS = {
             'janelas da Fase 2, blocos na parede da fase 6.'],
         'soon': '(em breve)', 'not_yet': '(Ainda não disponível.)',
         'x_crest': 'Randomizar Crest inicial',
-        'x_crest_desc': 'O Firebrand começa com uma crest sorteada (nunca a Tornado). O tiro básico vira o item '
-                        'Fire Crest, que entra na pool.',
+        'x_crest_desc': 'O Firebrand começa com uma crest sorteada entre Fire Crest (o início original), Claw, Earth '
+                        'e Buster. Fora da Fire Crest, o tiro Fire vira o item Fire Crest, que entra na pool; com a '
+                        'Earth ele já começa transformado.',
         'x_head': 'Randomizar Head Butt',
-        'x_head_desc': 'A cabeçada vira item da pool: sem ela não dá pra quebrar estátuas nem janelas.',
+        'x_head_desc': 'A cabeçada vira item: só sai com o talismã Skull EQUIPADO, em qualquer forma (as gárgulas '
+                       'Earth, Water e Air usam Cima + A). Sem a Skull nenhuma forma dá cabeçada, e o que pede '
+                       'cabeçada (estátuas que só ela quebra, Hippogriff 1 etc.) passa a depender da Skull.',
         'diff_desc': {
             1: 'Itens fortes nas esferas 1 a 3, mais HP no começo. No início do jogo, no máximo 3 crests/Armor. A '
                "lógica aceita a Armor no lugar da Water Crest em alguns checks debaixo d'água.",
@@ -126,7 +129,7 @@ TEXTS = {
         'anti_warn': 'Desativar o patch anti-softlock com a dificuldade 5 selecionada pode tornar a seed impossível '
                      'de finalizar. Desative por conta e risco.\n\nDesativar mesmo assim?',
         'on': 'ligado', 'off': 'desligado',
-        'info': '{m}\n\nDificuldade {v}: {d}\n\nObjetivo: {g}\n{a}: {s}\n{k}: {ks}',
+        'info': '{m}\n\nDificuldade {v}: {d}\n\nObjetivo: {g}\n{a}: {s}\n{k}: {ks}\n{c}: {cs}\n{h}: {hs}',
         'skip': 'Skip Somulo',
         'skip_desc': 'Pula a luta do Somulo na abertura (que é praticamente uma cutscene): o jogo começa na área 1, '
                      'com o Somulo já vencido, e o item que ele soltaria aparece em cima do Firebrand.',
@@ -142,30 +145,42 @@ TEXTS = {
         'go_no_crests': 'Os objetivos "All Bosses" e "All 4 Main Crests" precisam das Crests na pool.',
         'no_fill_adv': '"{n}" não fechou a lógica com essas opções. Tente outro nome, ou mude a pool ou o objetivo.',
         'fixed_crests': '(fixa)', 'locked_anti': '(obrigatória com remoção de 4)',
+        'locked_key': '(item-chave com o Head Butt)',
         'go_removal': 'O objetivo "All 4 Main Crests" não combina com a remoção de itens.',
-        'load': 'Carregar', 'load_tip': 'Carregar um preset (.json)', 'load_title': 'Carregar preset',
+        'load_tip': 'Carregar preset (.json)', 'load_title': 'Carregar preset',
         'preset_bad': 'Não deu pra ler o preset:\n{e}', 'summary': 'Resumo',
+        'save_tip': 'Salvar as opções marcadas como preset (.json)', 'save_title': 'Salvar preset',
+        'preset_save_bad': 'Não deu pra salvar o preset:\n{e}',
         'adv_names': {'preset': 'Preset', 'diff': 'Dificuldade', 'access': 'Acessibilidade', 'pool': 'Pool de Itens',
                       'density': 'Densidade', 'removal': 'Remoção de itens', 'hp': 'HP disponível',
                       'goal': 'Objetivo', 'starter': 'Starter Crest', 'head': 'Randomizar Head Butt',
-                      'somulo': 'Skip Somulo', 'level': 'Nível da lógica', 'anti': 'Anti-Softlock'},
+                      'somulo': 'Skip Somulo', 'level': 'Nível da lógica', 'anti': 'Anti-Softlock',
+                      'prog': 'Progressão', 'pace': 'Ritmo', 'placement': 'Colocação',
+                      'prio_strength': 'Intensidade', 'prio': 'Prioridade por item', 'early': 'Filler no início'},
         'adv_values': {'custom': 'Custom', 'rando': 'Rando', 'all': 'All Stages', 'vanilla': 'Vanilla',
                        'none': 'Nenhuma', 'sparse': 'Sparse', 'medium': 'Medium', 'full': 'Full', 'earth': 'Earth',
-                       'buster': 'Buster', 'claw': 'Claw', 'no': 'Não', 'yes': 'Sim'},
+                       'buster': 'Buster', 'claw': 'Claw', 'no': 'Não', 'yes': 'Sim', 'slow': 'Lento',
+                       'uniform': 'Uniforme', 'fast': 'Rápido', 'neutral': 'Neutra', 'forced': 'Forçada',
+                       'local': 'Local', 'moderate': 'Moderada', 'strong': 'Forte', 'default': 'Padrão',
+                       'early': 'Cedo', 'late': 'Tarde'},
+        'prio_none': 'tudo Padrão', 'early_none': 'nenhum',
         'pool_names': {'crests': 'Crests', 'vellum': 'Vellum', 'potion': 'Potion', 'talisman': 'Talismã',
                        'hp': 'HP', 'refill': 'Refil HP', 'coins': 'Moedas 20G', 'insanity': 'Insanity',
                        'rando': 'Rando'},
         'adv_desc': {
-            'preset': 'Carrega as opções desta guia de um arquivo .json. Custom = as opções marcadas agora.',
-            'diff': 'De 1 a 5: marca as opções abaixo como na dificuldade da guia Simples, menos o Nível da lógica, '
-                    'que é separado. Mexer em qualquer outra opção abaixo troca para Custom.',
+            'preset': 'Pasta (Carregar): traz as opções desta guia de um arquivo .json. Disquete (Salvar): grava '
+                      'as opções marcadas agora num .json (o nome do arquivo vira o nome do preset, que entra '
+                      'na lista). Custom = as opções marcadas agora.',
+            'diff': 'De 1 a 5: marca as opções abaixo como na dificuldade da guia Simples, menos o Nível da lógica '
+                    'e a Progressão, que são separados. Mexer em qualquer outra opção troca para Custom.',
             'level': 'Até onde a lógica pode exigir truques (o piso de cada caminho da lógica). 1 = só o básico; '
                      "cada nível acima libera mais caminhos, como correr debaixo d'água sem a Water Crest. Independe da "
                      'Dificuldade (ex.: Dificuldade 1 com Nível 5).',
             'anti': 'Sim: patches de mapa contra softlock (área 27; e, sem Air Crest e sem Tornado, caminho pela Claw '
                     'nas áreas 29 e 38). Recomendado com remoção de itens.',
             'access': 'All Stages: libera as fases 5 e 6 desde o início.\nVanilla: o jogo começa só com as 4 fases '
-                      'iniciais.\nRando: o gerador escolhe.',
+                      'iniciais; as fases 5 e 6 (e o castelo) abrem depois de vencer Arma 1, Ovnunu, Flame Lord, '
+                      'Flier 1 e Arma 2, como no jogo original.\nRando: o gerador escolhe.',
             'pool': 'Quais itens entram no sorteio; o que ficar desmarcado continua no check original.\nRando: ao '
                     'gerar, o gerador escolhe de 1 a 7 categorias.\nInsanity: potes, estátuas e quebráveis que hoje '
                     'não têm item (em breve).\nCrests fixas na pool com crest inicial, remoção de itens ou objetivo '
@@ -180,10 +195,32 @@ TEXTS = {
             'goal': 'O que libera o castelo do Phalanx.\nRando: o gerador escolhe ao gerar.',
             'starter': 'Vanilla: começa com o tiro Fire, como no jogo original.\nEarth, Buster ou Claw: começa com '
                        'essa crest; o tiro Fire vira o item Fire Crest, que entra na pool.\nRando: o gerador escolhe.',
-            'head': 'Não: cabeçada desde o começo, como no jogo original.\nSim: a cabeçada vira item da pool.\nRando: '
-                    'o gerador decide se randomiza ou não.',
+            'head': 'Não: a cabeçada é da forma normal, como no jogo original.\nSim: a cabeçada só sai com o '
+                    'talismã Skull equipado, em qualquer forma (gárgulas com Cima + A), e a Skull vira item de '
+                    'progressão (o Talismã fica preso na pool).\nRando: o gerador decide se randomiza ou não.',
             'somulo': 'Sim: pula a luta do Somulo na abertura; o jogo começa na área 1, com o Somulo já vencido e o '
-                      'item dele em cima do Firebrand.\nNão: começa no Coliseu, como no jogo original.'},
+                      'item dele em cima do Firebrand.\nNão: começa no Coliseu, como no jogo original.',
+            'prog': 'Como os itens se espalham pelas esferas (as "rodadas" do spoiler: o que dá pra pegar com o que '
+                    'já se tem). Não mexe na Dificuldade: a lógica e as regras da Densidade continuam valendo por '
+                    'cima destas opções.',
+            'pace': 'Quantos itens que abrem caminho (crests, Armor, Vellum) aparecem por esfera.\nLento: cada '
+                    'item-chave abre pouca coisa por vez: mais backtracking e mais esferas, sem empilhar os itens no '
+                    'fim.\nUniforme: o padrão.\nRápido: vários de uma vez; menos esferas.',
+            'placement': 'Onde cai o item-chave, o que abre a próxima parte do jogo.\nNeutra: em qualquer check que '
+                         'acabou de abrir.\nForçada: no check mais difícil de alcançar entre os que abriram (piso '
+                         'mais alto da lógica e, no empate, o que pede mais itens, HP ou chefes).\nLocal: na mesma '
+                         'fase do item-chave anterior, ou na mais perto.',
+            'prio_strength': 'Força da Prioridade por item.\nModerada: puxa o item um pouco pra cedo ou pra '
+                             'tarde.\nForte: Cedo cai quase sempre na 1ª esfera possível; Tarde fica entre os '
+                             'últimos.',
+            'prio': 'Clique no item para trocar: Padrão, Cedo, Tarde (botão direito volta).\nCedo: tende a cair '
+                    'nas primeiras esferas. Tarde: nas últimas.\nA lógica sempre vence: um item Tarde que é o único '
+                    'jeito de seguir cai cedo mesmo assim, e com Densidade alta os itens fortes não caem cedo. A Fire '
+                    'Crest só está na pool com Starter Crest diferente de Vanilla.',
+            'early': 'Filler = itens de apoio (HP, Potion, Vellum, talismãs, Refil HP, moedas).\nAbra a lista e '
+                     'marque os itens: uma unidade de cada item marcado cai garantida no início do jogo (num dos '
+                     'checks que abrem sem precisar de nada), se ele estiver na pool. O HP respeita o limite de HP do '
+                     'começo que a Densidade define.'},
         'follow': 'Siga o Natan nas redes:',
         'about_title': 'Sobre o DCOR', 'version': 'Versão {v}', 'close': 'Fechar',
         'credits': [
@@ -216,10 +253,14 @@ TEXTS = {
             'Stage 6 wall blocks.'],
         'soon': '(coming soon)', 'not_yet': '(Not available yet.)',
         'x_crest': 'Randomize starting Crest',
-        'x_crest_desc': 'Firebrand starts with a random crest (never Tornado). The basic shot becomes the Fire '
-                        'Crest item, which goes into the pool.',
+        'x_crest_desc': 'Firebrand starts with a crest rolled among Fire Crest (the original start), Claw, Earth '
+                        'and Buster. Other than Fire Crest, the Fire shot becomes the Fire Crest item, which goes into '
+                        'the pool; with Earth he starts already transformed.',
         'x_head': 'Randomize Head Butt',
-        'x_head_desc': 'The head butt becomes a pool item: without it you cannot break statues or windows.',
+        'x_head_desc': 'The head butt becomes an item: it only works with the Skull talisman EQUIPPED, in any '
+                       'form (the Earth, Water and Air gargoyles use Up + A). Without the Skull no form can head '
+                       'butt, and whatever needs it (statues only it breaks, Hippogriff 1, etc.) depends on the '
+                       'Skull.',
         'diff_desc': {
             1: 'Strong items in spheres 1 to 3, more HP at the start. Early game: at most 3 crests/Armor. The logic '
                'accepts the Armor instead of the Water Crest for some underwater checks.',
@@ -252,7 +293,7 @@ TEXTS = {
         'anti_warn': 'Disabling the anti-softlock patch with difficulty 5 selected may make the seed impossible to '
                      'finish. Disable at your own risk.\n\nDisable anyway?',
         'on': 'on', 'off': 'off',
-        'info': '{m}\n\nDifficulty {v}: {d}\n\nGoal: {g}\n{a}: {s}\n{k}: {ks}',
+        'info': '{m}\n\nDifficulty {v}: {d}\n\nGoal: {g}\n{a}: {s}\n{k}: {ks}\n{c}: {cs}\n{h}: {hs}',
         'skip': 'Skip Somulo',
         'skip_desc': 'Skips the opening Somulo fight (it is basically a cutscene): the game starts in area 1 with '
                      'Somulo already beaten, and the item he would drop appears on top of Firebrand.',
@@ -268,30 +309,42 @@ TEXTS = {
         'go_no_crests': 'The "All Bosses" and "All 4 Main Crests" goals need Crests in the pool.',
         'no_fill_adv': '"{n}" did not pass the logic with these options. Try another name, or change the pool or goal.',
         'fixed_crests': '(locked)', 'locked_anti': '(required with removal of 4)',
+        'locked_key': '(key item with Head Butt)',
         'go_removal': 'The "All 4 Main Crests" goal does not work with item removal.',
-        'load': 'Load', 'load_tip': 'Load a preset (.json)', 'load_title': 'Load preset',
+        'load_tip': 'Load preset (.json)', 'load_title': 'Load preset',
         'preset_bad': "Couldn't read the preset:\n{e}", 'summary': 'Summary',
+        'save_tip': 'Save the selected options as a preset (.json)', 'save_title': 'Save preset',
+        'preset_save_bad': "Couldn't save the preset:\n{e}",
         'adv_names': {'preset': 'Preset', 'diff': 'Difficulty', 'access': 'Accessibility', 'pool': 'Item Pool',
                       'density': 'Density', 'removal': 'Item removal', 'hp': 'Available HP', 'goal': 'Goal',
                       'starter': 'Starter Crest', 'head': 'Randomize Head Butt', 'somulo': 'Skip Somulo',
-                      'level': 'Logic level', 'anti': 'Anti-Softlock'},
+                      'level': 'Logic level', 'anti': 'Anti-Softlock', 'prog': 'Progression', 'pace': 'Pace',
+                      'placement': 'Placement', 'prio_strength': 'Strength', 'prio': 'Item priority',
+                      'early': 'Early filler items'},
         'adv_values': {'custom': 'Custom', 'rando': 'Rando', 'all': 'All Stages', 'vanilla': 'Vanilla',
                        'none': 'None', 'sparse': 'Sparse', 'medium': 'Medium', 'full': 'Full', 'earth': 'Earth',
-                       'buster': 'Buster', 'claw': 'Claw', 'no': 'No', 'yes': 'Yes'},
+                       'buster': 'Buster', 'claw': 'Claw', 'no': 'No', 'yes': 'Yes', 'slow': 'Slow',
+                       'uniform': 'Uniform', 'fast': 'Fast', 'neutral': 'Neutral', 'forced': 'Forced',
+                       'local': 'Local', 'moderate': 'Moderate', 'strong': 'Strong', 'default': 'Default',
+                       'early': 'Early', 'late': 'Late'},
+        'prio_none': 'all Default', 'early_none': 'none',
         'pool_names': {'crests': 'Crests', 'vellum': 'Vellum', 'potion': 'Potion', 'talisman': 'Talisman',
                        'hp': 'HP', 'refill': 'HP Refill', 'coins': '20G Coins', 'insanity': 'Insanity',
                        'rando': 'Rando'},
         'adv_desc': {
-            'preset': 'Loads the options of this tab from a .json file. Custom = the options selected now.',
-            'diff': '1 to 5: sets the options below like the Simple tab difficulty, except Logic level, which is '
-                    'separate. Changing any other option below switches to Custom.',
+            'preset': 'Folder (Load): brings the options of this tab from a .json file. Disk (Save): writes the '
+                      'options selected now to a .json (the file name becomes the preset name, added to the '
+                      'list). Custom = the options selected now.',
+            'diff': '1 to 5: sets the options below like the Simple tab difficulty, except Logic level and '
+                    'Progression, which are separate. Changing any other option switches to Custom.',
             'level': 'How far the logic may require tricks (the floor of each logic path). 1 = basics only; each '
                      'level above opens more paths, like running underwater without the Water Crest. Independent of '
                      'Difficulty (e.g. Difficulty 1 with Level 5).',
             'anti': 'Yes: map patches against softlocks (area 27; and, without Air Crest and Tornado, a Claw path in '
                     'areas 29 and 38). Recommended with item removal.',
             'access': 'All Stages: stages 5 and 6 are open from the start.\nVanilla: the game starts with only the '
-                      'first 4 stages.\nRando: the generator picks.',
+                      'first 4 stages; stages 5 and 6 (and the castle) open after beating Arma 1, Ovnunu, Flame Lord, '
+                      'Flier 1 and Arma 2, like the original game.\nRando: the generator picks.',
             'pool': 'Which items are shuffled; anything unchecked stays in its original check.\nRando: when '
                     'generating, the generator picks 1 to 7 categories.\nInsanity: pots, statues and breakables '
                     'that have no item today (coming soon).\nCrests are locked in the pool with a starting crest, '
@@ -306,10 +359,32 @@ TEXTS = {
             'starter': 'Vanilla: starts with the Fire shot, like the original game.\nEarth, Buster or Claw: starts '
                        'with that crest; the Fire shot becomes the Fire Crest item, which goes into the pool.\nRando: '
                        'the generator picks.',
-            'head': 'No: head butt from the start, like the original game.\nYes: the head butt becomes a pool '
-                    'item.\nRando: the generator decides whether to randomize it.',
+            'head': 'No: the head butt belongs to the normal form, like the original game.\nYes: the head butt '
+                    'only works with the Skull talisman equipped, in any form (gargoyles with Up + A), and the '
+                    'Skull becomes a progression item (Talisman is locked in the pool).\nRando: the generator '
+                    'decides whether to randomize it.',
             'somulo': 'Yes: skips the opening Somulo fight; the game starts in area 1 with Somulo already beaten and '
-                      'his item on top of Firebrand.\nNo: starts in the Colosseum, like the original game.'},
+                      'his item on top of Firebrand.\nNo: starts in the Colosseum, like the original game.',
+            'prog': 'How items spread over the spheres (the spoiler "rounds": what you can get with what you '
+                    'already have). It does not touch Difficulty: the logic and the Density rules still apply on top '
+                    'of these options.',
+            'pace': 'How many path-opening items (crests, Armor, Vellum) show up per sphere.\nSlow: each key item '
+                    'opens little at a time: more backtracking and more spheres, without piling items at the end.\n'
+                    'Uniform: the default.\nFast: many at once; fewer spheres.',
+            'placement': 'Where the key item lands, the one that opens the next part of the game.\nNeutral: in any '
+                         'check that just opened.\nForced: in the hardest-to-reach check among the ones that opened '
+                         '(highest logic floor and, on a tie, the one that needs more items, HP or bosses).\nLocal: '
+                         'in the same stage as the previous key item, or the closest one.',
+            'prio_strength': 'Strength of Item priority.\nModerate: pulls the item a bit earlier or later.\nStrong: '
+                             'Early almost always lands in the first possible sphere; Late stays among the last.',
+            'prio': 'Click the item to switch: Default, Early, Late (right click goes back).\nEarly: tends to land '
+                    'in the first spheres. Late: in the last ones.\nThe logic always wins: a Late item that is the '
+                    'only way forward still lands early, and with high Density strong items never land early. The '
+                    'Fire Crest is only in the pool with a Starter Crest other than Vanilla.',
+            'early': 'Filler = support items (HP, Potion, Vellum, talismans, HP Refill, coins).\nOpen the list and '
+                     'check items: one of each checked item is guaranteed at the start of the game (in one of the '
+                     'checks open with nothing), if it is in the pool. HP follows the starting HP limit set by '
+                     'Density.'},
         'follow': 'Follow Natan:',
         'about_title': 'About DCOR', 'version': 'Version {v}', 'close': 'Close',
         'credits': [
@@ -354,15 +429,24 @@ ADV_CHOICES = {'diff': ('1', '2', '3', '4', '5', 'custom'), 'level': ('1', '2', 
                'access': ('all', 'vanilla', 'rando'),
                'removal': ('none', '2', '3', '4', 'rando'), 'hp': ('sparse', 'medium', 'full', 'rando'),
                'goal': tuple(GO_KEYS) + ('rando',), 'starter': ('vanilla', 'earth', 'buster', 'claw', 'rando'),
-               'head': ('no', 'yes', 'rando'), 'somulo': ('no', 'yes'), 'anti': ('no', 'yes')}
-# ainda sem ROM (Neitan, 02/10): na lista, travados "(em breve)". Hoje o mapa já abre as 6 fases (All Stages).
-ADV_SOON = {'access': {'vanilla', 'rando'}, 'head': {'yes', 'rando'}}
+               'head': ('no', 'yes', 'rando'), 'somulo': ('no', 'yes'), 'anti': ('no', 'yes'),
+               'pace': ('slow', 'uniform', 'fast'), 'placement': ('neutral', 'forced', 'local'),
+               'prio_strength': ('moderate', 'strong')}
+# ainda sem ROM (Neitan, 02/10): na lista, travados "(em breve)". Acessibilidade Vanilla/Rando: desde a 0.3.2.
+ADV_SOON = {}                                    # 04/10: Head Butt liberado (head_butt.py)
 POOL_KEYS = ('crests', 'vellum', 'potion', 'talisman', 'hp', 'refill', 'coins', 'insanity')
 POOL_SOON = {'insanity'}                         # locais novos do modo Insano: ainda não existem
 POOL_CLASSIC_EXTRA = [k for k in POOL_KEYS if k not in POOL_SOON]
 ADV_DEFAULT = {'preset': 'custom', 'diff': '3', 'level': '3', 'access': 'all', 'pool': POOL_CLASSIC_EXTRA,
                'pool_rando': False, 'density': 50, 'removal': 'none', 'hp': 'full', 'goal': 'vellum',
-               'starter': 'vanilla', 'head': 'no', 'somulo': 'no', 'anti': 'no'}
+               'starter': 'vanilla', 'head': 'no', 'somulo': 'no', 'anti': 'no',
+               'pace': 'uniform', 'placement': 'neutral', 'prio_strength': 'moderate', 'prio': {}, 'early': []}
+# Progressão estilo Map Rando (Neitan, 03/10): coluna própria no Avançado. Como o Nível da lógica, não faz parte da
+# Dificuldade 1-5 (mexer nela não troca a Dificuldade pra Custom). prio = {item: 'early'/'late'} (sem = Padrão);
+# early = itens do Filler no início (R.EARLY_ITEMS). O padrão gera as mesmas seeds de antes (testes/adv_ref.py).
+PROG_FIELDS = ('pace', 'placement', 'prio_strength')
+PRIO_STATES = ('default', 'early', 'late')
+ADV_OWN = {'level', 'pace', 'placement', 'prio_strength', 'prio', 'early'}     # não trocam a Dificuldade pra Custom
 # Dificuldade 1-5 do Avançado = a da guia Simples no modo Clássico Extra, menos o Nível da lógica, que é separado
 # (Neitan, 03/10: dá pra Dificuldade 1 com Nível 5) (o objetivo fica como está; a 5 troca o
 # "4 crests" por 5 Vellums e liga o Anti-Softlock). Densidade: a ordem das dificuldades. HP: a 4 tira 5 dos 16
@@ -384,6 +468,12 @@ def density_bucket(v):
 
 
 GO_NEEDS_CRESTS = ('crests', 'bosses')   # com as crests no lugar original o castelo abriria na 3ª esfera (02/10)
+
+
+def adv_needs_talisman(adv):
+    """Talismã preso na pool com o Head Butt como item: a Skull vira item de progressão (no lugar original ela pede a
+    própria cabeçada, V5, e a seed nunca fecharia)."""
+    return adv['head'] != 'no'
 
 
 def adv_needs_crests(adv):
@@ -410,21 +500,29 @@ def adv_resolve(adv, seed, attempt=0):
                            and (g not in GO_NEEDS_CRESTS or 'crests' in keys)])
     if span and goal == 'crests':
         raise ValueError(tr('go_removal'))
+    access = adv['access'] if adv['access'] != 'rando' else rng.choice(('all', 'vanilla'))   # por último: não mexe
+                                                                                            # nos outros sorteios
+    head = adv['head'] == 'yes' or (adv['head'] == 'rando' and rng.random() < 0.5)          # depois do access
+    if head and 'talisman' not in keys:
+        keys = [k for k in POOL_KEYS if k in keys + ['talisman']]
     if goal in GO_NEEDS_CRESTS and 'crests' not in keys:
         raise ValueError(tr('go_no_crests'))
     anti = adv['anti'] == 'yes' or adv['removal'] == '4'          # remoção de 4: Air e Tornado fora (Claw)
     logic = R.Logic(density_bucket(adv['density']), R.pool_mode(keys), goal, anti,
                     ADV_START[adv['starter']], adv['somulo'] == 'yes', level=int(adv['level']),
-                    hp_removed=HP_TOTAL - left, remove_span=span)
+                    hp_removed=HP_TOTAL - left, remove_span=span, access=access, headbutt=head)
     logic.soft_cap = True
     logic.min_spheres = ADV_MIN_SPHERES
-    return logic, {'pool': keys, 'hp': left, 'goal': goal, 'anti': anti}
+    logic.pace, logic.placement, logic.prio_strength = adv['pace'], adv['placement'], adv['prio_strength']
+    logic.priority, logic.early = dict(adv['prio']), tuple(adv['early'])
+    return logic, {'pool': keys, 'hp': left, 'goal': goal, 'anti': anti, 'access': access, 'head': head}
 
 
 def adv_clean(d):
     """Opções do Avançado válidas a partir de um dict qualquer (config ou preset): o que faltar ou vier errado fica
     no padrão."""
-    out = {k: (list(v) if isinstance(v, list) else v) for k, v in ADV_DEFAULT.items()}
+    out = {k: (list(v) if isinstance(v, list) else dict(v) if isinstance(v, dict) else v)
+           for k, v in ADV_DEFAULT.items()}
     if not isinstance(d, dict):
         return out
     for k, keys in ADV_CHOICES.items():
@@ -443,7 +541,32 @@ def adv_clean(d):
         pass
     if isinstance(d.get('preset'), str):
         out['preset'] = d['preset']
+    if isinstance(d.get('prio'), dict):
+        out['prio'] = {k: v for k, v in d['prio'].items() if k in R.PRIO_ITEMS and v in ('early', 'late')}
+    if isinstance(d.get('early'), list):
+        out['early'] = [k for k in R.EARLY_ITEMS if k in d['early']]
     return out
+
+
+def item_name(it, lang=None):
+    return {'Recarga': tr('pool_names', lang)['refill'], '20G': tr('pool_names', lang)['coins']}.get(it, it)
+
+
+def prog_head(adv):
+    """Cabeçalho do spoiler (inglês): a progressão, só quando sai do padrão."""
+    v = tr('adv_values', 'en')
+    parts = []
+    if adv['pace'] != 'uniform':
+        parts.append(f"pace {v[adv['pace']]}")
+    if adv['placement'] != 'neutral':
+        parts.append(f"placement {v[adv['placement']]}")
+    for st in ('early', 'late'):
+        its = [it for it in R.PRIO_ITEMS if adv['prio'].get(it) == st]
+        if its:
+            parts.append(f"{v[st]} ({v[adv['prio_strength']]}): {', '.join(its)}")
+    if adv['early']:
+        parts.append('early filler items: ' + ', '.join(item_name(it, 'en') for it in adv['early']))
+    return f", progression: {'; '.join(parts)}" if parts else ''
 
 
 def adv_value(field, k):
@@ -465,10 +588,17 @@ RES = os.path.dirname(os.path.abspath(__file__))          # a pasta data (códig
 HOME = os.path.dirname(RES)                                # a pasta do DCOR (ROM, Seed, Spoiler, config)
 CONFIG = os.path.join(HOME, 'dcor_config.json')
 
-BASE_W, BASE_H = 720, 980          # tamanho inicial da janela (980: Skip Somulo, 01/10)
-MIN_S, MAX_S = 0.8, 1.8            # faixa da escala das letras (pela largura; o que não couber rola)
+# tamanho inicial da janela (03/10, Neitan: Avançado com a coluna Progressão; a janela cresce na largura, não na
+# altura: 950 = o que a guia Simples pede; antes 720 x 980)
+BASE_W, BASE_H = 1120, 950
+MIN_S, MAX_S = 0.8, 1.8            # faixa da escala das letras (o que não couber rola)
 MIN_SIZE = (320, 240)              # dá pra encolher além do conteúdo: aparecem as barras de rolagem (29/09)
-MIN_CONTENT_W = BASE_W                # abaixo desta largura (x escala) o conteúdo não espreme: rola na horizontal
+# Escala das letras (03/10, Neitan: "olha como tá tudo MINÚSCULO, mas a janela tá GRANDE"): a letra cresce até o
+# conteúdo da guia aberta encher a janela, o que acabar antes, altura ou largura. NAT_W = largura que cada guia pede
+# na escala 1 (as duas guias têm duas colunas de opções + descrição); a altura é medida
+# (folgas e margens também escalam, z()). Abaixo de NAT_W x MIN_S o conteúdo não espreme: rola.
+NAT_W = {'simple': 1000, 'adv': 1080}
+SETTLE_MS = 150    # redimensionar: a escala é refeita quando a borda fica parada este tempo (on_resize)
 # fontes nomeadas: mudar o tamanho delas atualiza tudo que as usa (rótulos e textos de Canvas).
 # 'medium' = família do peso médio (Roboto Medium; sem a Roboto, Segoe UI Semibold).
 FONT_SPECS = {'base': (11, 'normal', 'roman'), 'small': (10, 'normal', 'roman'), 'italic': (10, 'normal', 'italic'),
@@ -507,7 +637,18 @@ def make_fonts(root):
         F[k] = tkfont.Font(root, family=fam, size=size, weight=weight, slant=slant)
 
 
+ZOOM = 1.0      # escala atual (scale_fonts): folgas e margens em pixels acompanham a letra (z)
+
+
+def z(n):
+    """n pixels na escala atual (03/10, Neitan: só a letra encolhia e as folgas não; ficava letra miúda em caixa
+    grande)."""
+    return max(1, round(n * ZOOM)) if n else 0
+
+
 def scale_fonts(s):
+    global ZOOM
+    ZOOM = s
     for k, (size, *_) in FONT_SPECS.items():
         F[k].configure(size=max(7, round(size * s)))
 
@@ -646,11 +787,17 @@ class Card(tk.Canvas):
     def __init__(self, master, fill=CARD, line=CARD_LINE, bg=BG, r=12, pad=14, hug=False):
         super().__init__(master, bg=bg, highlightthickness=0, height=40, width=1)
         self.fill, self.line, self.r, self.pad, self.hug = fill, line, r, pad, hug
+        self.pad0 = pad
         self.inner = tk.Frame(self, bg=fill)
         self.win = self.create_window(pad, pad, window=self.inner, anchor='nw')
         self.shape = None
         self.bind('<Configure>', self.redraw)
         self.inner.bind('<Configure>', self.fit)
+
+    def rescale(self):
+        self.pad = z(self.pad0)
+        self.coords(self.win, self.pad, self.pad)
+        self.fit()
 
     def fit(self, _=None):                        # altura mínima = a do conteúdo
         need = self.inner.winfo_reqheight() + 2 * self.pad
@@ -685,8 +832,8 @@ class RButton(tk.Canvas):
         self.rescale()
 
     def rescale(self):
-        w = self.font.measure(self.text) + 2 * self.padx
-        h = self.font.metrics('linespace') + 2 * self.pady
+        w = self.font.measure(self.text) + 2 * z(self.padx)
+        h = self.font.metrics('linespace') + 2 * z(self.pady)
         self.configure(width=w, height=h)
         self.draw()
 
@@ -711,6 +858,42 @@ class RButton(tk.Canvas):
         self.enabled = on
         self.config(cursor='hand2' if on else 'arrow')
         self.draw()
+
+
+class IconButton(RButton):
+    """RButton quadrado com ícone desenhado no lugar do texto: 'load' = pasta, 'save' = disquete (03/10: Carregar e
+    Salvar com texto espremiam a lista de presets e uma linha a mais não cabe na janela). O texto vai na dica."""
+
+    def __init__(self, master, icon, command, font, **kw):
+        self.icon = icon
+        super().__init__(master, '', command, font, **kw)
+
+    def rescale(self):
+        h = self.font.metrics('linespace') + 2 * z(self.pady)
+        self.configure(width=h, height=h)
+        self.draw()
+
+    def draw(self):
+        super().draw()
+        w, h = self.winfo_width(), self.winfo_height()
+        if w < 4:
+            w, h = int(self.cget('width')), int(self.cget('height'))
+        c = self.fg if self.enabled else DIM
+        s = min(w, h) * 0.46                                  # lado do ícone
+        x0, y0 = (w - s) / 2, (h - s) / 2
+        x1, y1 = x0 + s, y0 + s
+        lw = max(1.5, s / 11)
+        if self.icon == 'load':                               # pasta: aba em cima à esquerda + corpo
+            self.create_polygon(x0, y0 + s * .12, x0 + s * .38, y0 + s * .12, x0 + s * .5, y0 + s * .26, x1,
+                                y0 + s * .26, x1, y1 - s * .08, x0, y1 - s * .08, fill='', outline=c, width=lw,
+                                joinstyle='round')
+            self.create_line(x0, y0 + s * .4, x1, y0 + s * .4, fill=c, width=lw)
+        else:                                                 # disquete: corpo com canto cortado, janela e etiqueta
+            k = s * .22
+            self.create_polygon(x0, y0, x1 - k, y0, x1, y0 + k, x1, y1, x0, y1, fill='', outline=c, width=lw,
+                                joinstyle='round')
+            self.create_rectangle(x0 + s * .24, y0, x1 - s * .3, y0 + s * .3, outline=c, width=lw)
+            self.create_rectangle(x0 + s * .2, y0 + s * .56, x1 - s * .2, y1, outline=c, width=lw)
 
 
 class Field(tk.Frame):
@@ -769,7 +952,7 @@ class DiffBar(tk.Canvas):
         self.rescale()
 
     def rescale(self):
-        self.configure(height=F['num'].metrics('linespace') + 16)
+        self.configure(height=F['num'].metrics('linespace') + z(16))
         self.draw()
 
     def geom(self):
@@ -812,7 +995,7 @@ class OptRow(tk.Canvas):
         self.rescale()
 
     def rescale(self):
-        self.configure(height=F['base'].metrics('linespace') + 16)
+        self.configure(height=F['base'].metrics('linespace') + z(16))
         self.draw()
 
     def set_enabled(self, on, note=None):
@@ -854,6 +1037,46 @@ class OptRow(tk.Canvas):
             self.create_text(self.bbox(t)[2] + 6, cy, text=self.note, anchor='w', fill=DIM, font=F['italic'])
 
 
+class PrioRow(tk.Canvas):
+    """Prioridade de um item (Progressão, 03/10): nome à esquerda e o estado à direita (Padrão / Cedo / Tarde); o
+    clique avança, o botão direito volta. on_pick(item, estado novo)."""
+    COLOR = {'default': DIM, 'early': OK, 'late': '#fbbf24'}
+
+    def __init__(self, master, item, name, state, on_pick):
+        super().__init__(master, bg=CARD, highlightthickness=0, width=1, cursor='hand2')
+        self.item, self.name, self.state, self.on_pick, self.over = item, name, state, on_pick, False
+        self.bind('<Configure>', lambda _: self.draw())
+        self.bind('<Button-1>', lambda _: self.step(1))
+        self.bind('<Button-3>', lambda _: self.step(-1))
+        self.bind('<Enter>', lambda _: self.set_over(True), add='+')
+        self.bind('<Leave>', lambda _: self.set_over(False), add='+')
+        self.rescale()
+
+    def rescale(self):
+        self.configure(height=F['base'].metrics('linespace') + z(12))
+        self.draw()
+
+    def set_over(self, on):
+        self.over = on
+        self.draw()
+
+    def set(self, state):
+        self.state = state
+        self.draw()
+
+    def step(self, d):
+        self.on_pick(self.item, PRIO_STATES[(PRIO_STATES.index(self.state) + d) % len(PRIO_STATES)])
+
+    def draw(self):
+        self.delete('all')
+        w, h = max(self.winfo_width(), 60), max(self.winfo_height(), 20)
+        fill = BTN_HI if self.over else SEL if self.state != 'default' else FIELD
+        round_rect(self, 1, 1, w - 2, h - 2, 7, fill=fill, outline=FIELD_LINE)
+        self.create_text(10, h // 2, text=self.name(self.item), anchor='w', fill=TEXT, font=F['base'])
+        self.create_text(w - 10, h // 2, text=tr('adv_values')[self.state], anchor='e', fill=self.COLOR[self.state],
+                         font=F['small'])
+
+
 class FlagPicker(tk.Canvas):
     """Bandeiras do idioma lado a lado no cabeçalho (Brasil, EUA; 30/09, modelo do Neitan com guias; antes uma em
     cima da outra). Desenhadas no Canvas (sem imagem), crescem com a letra. A escolhida fica num fundo aceso; on_pick
@@ -868,7 +1091,7 @@ class FlagPicker(tk.Canvas):
 
     def rescale(self):
         self.fh = round(F['base'].metrics('linespace') * 1.25)
-        self.fw, self.p, self.gap = round(self.fh * 1.75), 4, 6
+        self.fw, self.p, self.gap = round(self.fh * 1.75), z(4), z(6)
         self.configure(width=2 * (self.fw + 2 * self.p) + self.gap, height=self.fh + 2 * self.p)
         self.draw()
 
@@ -947,7 +1170,7 @@ class Dropdown(tk.Canvas):
         self.rescale()
 
     def rescale(self):
-        self.configure(height=F['base'].metrics('linespace') + 14)
+        self.configure(height=F['base'].metrics('linespace') + z(14))
         self.draw()
 
     def set_over(self, on):
@@ -977,8 +1200,23 @@ class Dropdown(tk.Canvas):
         top = self.pop = tk.Toplevel(self, bg=FIELD_LINE)
         top.withdraw()                          # posiciona escondida: janela sem borda já mostrada ignora a posição
         top.wm_overrideredirect(True)
-        box = tk.Frame(top, bg=FIELD)
+        box = self.box = tk.Frame(top, bg=FIELD)
         box.pack(fill='both', expand=True, padx=1, pady=1)
+        self.fill_rows(box)
+        top.update_idletasks()
+        w = max(self.winfo_width(), top.winfo_reqwidth())
+        x, y = self.winfo_rootx(), self.winfo_rooty() + self.winfo_height() + 2
+        if y + top.winfo_reqheight() > self.winfo_screenheight() - 40:          # sem espaço embaixo: abre pra cima
+            y = self.winfo_rooty() - top.winfo_reqheight() - 2
+        top.geometry(f'{w}x{top.winfo_reqheight()}+{x}+{y}')
+        top.deiconify()
+        top.bind('<ButtonPress>', self.outside)
+        top.bind('<Escape>', lambda _: self.close())
+        top.focus_set()
+        top.grab_set()                          # clique fora da lista chega aqui (outside) e fecha
+        self.draw()
+
+    def fill_rows(self, box):
         locked = self.locked()
         for k in self.keys:
             bg = SEL if k == self.value else FIELD
@@ -992,18 +1230,6 @@ class Dropdown(tk.Canvas):
             row.bind('<Enter>', lambda _, r=row: r.configure(bg=BTN_HI))
             row.bind('<Leave>', lambda _, r=row, c=bg: r.configure(bg=c))
             row.bind('<ButtonRelease-1>', lambda _, k=k: self.pick(k))
-        top.update_idletasks()
-        w = max(self.winfo_width(), top.winfo_reqwidth())
-        x, y = self.winfo_rootx(), self.winfo_rooty() + self.winfo_height() + 2
-        if y + top.winfo_reqheight() > self.winfo_screenheight() - 40:          # sem espaço embaixo: abre pra cima
-            y = self.winfo_rooty() - top.winfo_reqheight() - 2
-        top.geometry(f'{w}x{top.winfo_reqheight()}+{x}+{y}')
-        top.deiconify()
-        top.bind('<ButtonPress>', self.outside)
-        top.bind('<Escape>', lambda _: self.close())
-        top.focus_set()
-        top.grab_set()                          # clique fora da lista chega aqui (outside) e fecha
-        self.draw()
 
     def outside(self, e):
         p = self.pop
@@ -1027,6 +1253,68 @@ class Dropdown(tk.Canvas):
             self.draw()
 
 
+class MultiDropdown(Dropdown):
+    """Lista suspensa de várias escolhas (Filler no início; Neitan, 03/10: "em dropdown, fica mais organizado"). value =
+    lista marcada; o campo mostra os nomes (ou empty() sem nenhum, cortado com "..." se não couber). Na lista, cada
+    linha tem uma caixinha; o clique marca/desmarca e a lista continua aberta. on_change recebe o item clicado."""
+
+    def __init__(self, master, keys, name, value, on_change, empty, locked=None):
+        self.empty = empty
+        super().__init__(master, keys, name, list(value), on_change, locked=locked)
+
+    def set(self, value):
+        self.value = list(value)
+        self.draw()
+        if self.pop:                            # lista aberta: refaz as caixinhas
+            for w in self.box.winfo_children():
+                w.destroy()
+            self.fill_rows(self.box)
+
+    def draw(self):
+        self.delete('all')
+        w, h = max(self.winfo_width(), 60), max(self.winfo_height(), 20)
+        round_rect(self, 1, 1, w - 2, h - 2, 7, fill=BTN if self.over else FIELD,
+                   outline=FIELD_FOCUS if self.pop else FIELD_LINE)
+        text = ', '.join(self.name(k) for k in self.keys if k in self.value) or self.empty()
+        room = w - 44
+        if F['base'].measure(text) > room:
+            while text and F['base'].measure(text + '...') > room:
+                text = text[:-1]
+            text = text.rstrip(', ') + '...'
+        self.create_text(12, h // 2, text=text, anchor='w', fill=TEXT if self.value else MUTED, font=F['base'])
+        a, cx, cy = max(4, h // 7), w - 16, h // 2
+        self.create_line(cx - a, cy - a // 2, cx, cy + a // 2, cx + a, cy - a // 2, fill=MUTED, width=2)
+
+    def fill_rows(self, box):
+        lh = F['base'].metrics('linespace')
+        r = max(5, round(lh * 0.38))
+        locked = self.locked()                 # {item: nota}: cinza e sem clique
+        for k in self.keys:
+            on = k in self.value and k not in locked
+            bg = SEL if on else FIELD
+            row = tk.Frame(box, bg=bg, cursor='hand2')
+            row.pack(fill='x')
+            c = tk.Canvas(row, width=2 * r + 4, height=2 * r + 4, bg=bg, highlightthickness=0, cursor='hand2')
+            c.pack(side='left', padx=(12, 0), pady=5)
+            c.create_rectangle(2, 2, 2 * r + 2, 2 * r + 2, outline=ACCENT_HI if on else MUTED, width=2)
+            if on:
+                c.create_rectangle(6, 6, 2 * r - 2, 2 * r - 2, fill=TEXT, width=0)
+            lb = tk.Label(row, text=self.name(k) + (f'  {locked[k]}' if k in locked else ''), anchor='w', bg=bg,
+                          fg=DIM if k in locked else TEXT, font=F['base'], padx=10, pady=5, cursor='hand2')
+            lb.pack(side='left', fill='x', expand=True)
+            parts = (row, c, lb)
+            if k in locked:
+                row.configure(cursor='arrow'); c.configure(cursor='arrow'); lb.configure(cursor='arrow')
+                continue
+            for wdg in parts:
+                wdg.bind('<Enter>', lambda _, ps=parts: [x.configure(bg=BTN_HI) for x in ps])
+                wdg.bind('<Leave>', lambda _, ps=parts, b=bg: [x.configure(bg=b) for x in ps])
+                wdg.bind('<ButtonRelease-1>', lambda _, k=k: self.on_change(k))
+
+    def pick(self, k):
+        self.on_change(k)
+
+
 class Slider(tk.Canvas):
     """Controle deslizante de lo a hi no estilo da barra de dificuldade: caixa com o número + trilho com a parte
     cheia em ciano e uma bolinha; clique ou arraste. on_change recebe o valor."""
@@ -1040,7 +1328,7 @@ class Slider(tk.Canvas):
         self.rescale()
 
     def rescale(self):
-        self.configure(height=F['num'].metrics('linespace') + 12)
+        self.configure(height=F['num'].metrics('linespace') + z(12))
         self.draw()
 
     def geom(self):
@@ -1089,7 +1377,7 @@ class TabBar(tk.Canvas):
         self.rescale()
 
     def rescale(self):
-        self.configure(height=F['label'].metrics('linespace') + 20)
+        self.configure(height=F['label'].metrics('linespace') + z(20))
         self.draw()
 
     def spans(self):
@@ -1199,15 +1487,17 @@ def make_dirs(home=None):
         os.makedirs(os.path.join(home or HOME, d), exist_ok=True)
 
 
-def write_seed(text, van, mode, diff, go='vellum', anti=False, home=None, skip=False):
+def write_seed(text, van, mode, diff, go='vellum', anti=False, home=None, skip=False, crest=False, head=False):
     """Gera e grava Seed/DemonRando - Nome.sfc e Spoiler/DemonRando - Nome.txt (mode = índice em MODE_KEYS, go = chave
-    de GO_KEYS, anti = Anti-Softlock, skip = Skip Somulo). Devolve o nome do arquivo. O spoiler sai sempre em inglês (29/09)."""
+    de GO_KEYS, anti = Anti-Softlock, skip = Skip Somulo, crest = crest inicial sorteada). Devolve o nome do arquivo. O
+    spoiler sai sempre em inglês (29/09)."""
     name, seed = seed_from_name(text)
-    head = (f"DCOR {VERSION} - {tr('modes', 'en')[mode]}, difficulty {diff}, Goal: {go_name(go, 'en')}, "
-            f"{tr('anti', 'en')}: {'yes' if anti else 'no'}, Skip Somulo: {'yes' if skip else 'no'} "
+    hdr = (f"DCOR {VERSION} - {tr('modes', 'en')[mode]}, difficulty {diff}, Goal: {go_name(go, 'en')}, "
+            f"{tr('anti', 'en')}: {'yes' if anti else 'no'}, Skip Somulo: {'yes' if skip else 'no'}, "
+            f"Random starting crest: {'yes' if crest else 'no'}, Head Butt as item: {'yes' if head else 'no'} "
             f"(internal seed {seed})")
-    return save_seed(name, seed, R.build_seed(seed, van, R.Logic(diff, MODE_KEYS[mode], go, anti, skipsomulo=skip)),
-                     head, home)
+    logic = R.Logic(diff, MODE_KEYS[mode], go, anti, crest, skip, headbutt=head)
+    return save_seed(name, seed, R.build_seed(seed, van, logic), hdr, home)
 
 
 def write_seed_adv(text, van, adv, home=None):
@@ -1220,9 +1510,12 @@ def write_seed_adv(text, van, adv, home=None):
             break
     pools = ', '.join(tr('pool_names', 'en')[k] for k in got['pool'])
     rem = {'none': 'none', 'rando': '2-4'}.get(adv['removal'], adv['removal'])
-    head = (f"DCOR {VERSION} - Advanced: logic level {adv['level']}, density {adv['density']}, item pool: {pools}, "
+    head = (f"DCOR {VERSION} - Advanced: logic level {adv['level']}, density {adv['density']}, "
+            f"accessibility: {tr('adv_values', 'en')[got['access']]}, item pool: {pools}, "
             f"available HP: {got['hp']}/{HP_TOTAL}, item removal: {rem}, Goal: {go_name(got['goal'], 'en')}, "
-            f"Anti-Softlock: {'yes' if got['anti'] else 'no'}, Skip Somulo: {adv['somulo']} (internal seed {seed})")
+            f"Anti-Softlock: {'yes' if got['anti'] else 'no'}, Skip Somulo: {adv['somulo']}, "
+            f"Head Butt as item: {'yes' if got['head'] else 'no'}{prog_head(adv)} "
+            f"(internal seed {seed})")
     if res is None:
         raise RuntimeError(tr('no_fill_adv', n=name))
     return save_seed(name, seed, res, head, home)
@@ -1287,8 +1580,14 @@ class App:
         body = self.body = tk.Frame(self.view, bg=BG)
         self.body_win = self.view.create_window(0, 0, window=body, anchor='nw')
         body.columnconfigure(0, weight=1)
-        self.view.bind('<Configure>', lambda e: self.relayout())
-        body.bind('<Configure>', lambda e: self.relayout())
+        # redimensionar (03/10, Neitan: "fica MUITO lento e trava"): trocar a escala refaz ~100 componentes (0,3-0,4 s);
+        # durante o arrasto o conteúdo só estica (place_content, barato) e a escala é refeita uma vez, quando a borda
+        # para (SETTLE_MS sem evento novo)
+        self.view.bind('<Configure>', lambda e: self.on_resize())
+        body.bind('<Configure>', lambda e: self.on_resize())
+        self._settle_job = None
+        self._laying = self._again = False      # relayout: nunca um dentro do outro (RecursionError ao arrastar, 03/10)
+        self._fit_key, self._ceil = None, MAX_S  # teto da escala neste tamanho de janela (não fica oscilando)
         root.bind_all('<MouseWheel>', self.wheel)
         root.bind_all('<Shift-MouseWheel>', lambda e: self.wheel(e, 'x'))
         self.scalables, self.scale = [], 1.0
@@ -1358,9 +1657,12 @@ class App:
         self.set_go(self.gomode)
         self.anti_row.select(self.anti)
         self.skip_row.select(self.skip)
+        self.crest_row.select(self.crest)
+        self.head_row.select(self.head)
         self.set_mode(self.mode)
         self.refresh_adv()
         self.set_tab(self.tab)
+        self.pads = self.collect_pads(root)
         self.apply_scale(1.0)
         root.update_idletasks()
         self.refit()
@@ -1368,61 +1670,81 @@ class App:
 
     # --- guia Simples: o que o gerador usa hoje
     def build_simple(self, master):
+        """Guia Simples em 2 colunas (Neitan, 03/10: a letra acompanha a janela; empilhado, a altura limitava tudo):
+        Dificuldade em cima; Objetivo | Modo; Extras embaixo, em 2 colunas."""
         S = tk.Frame(master, bg=CARD)
-        S.columnconfigure(0, weight=1)
-        self.text(label(S, '', F['label']), 'diff').grid(row=0, column=0, sticky='w')
+        S.columnconfigure(0, weight=3, uniform='s')      # Objetivo: nota longa "(não na dificuldade 5)"
+        S.columnconfigure(1, weight=2, uniform='s')
+        self.text(label(S, '', F['label']), 'diff').grid(row=0, column=0, columnspan=2, sticky='w')
         self.diff = DiffBar(S, self.cfg.get('diff', DEFAULT_DIFF), self.set_diff)
-        self.diff.grid(row=1, column=0, sticky='ew', pady=(6, 10))
+        self.diff.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(6, 10))
         Tip(self.diff, lambda: tr('diff_tip', v=self.diff.value, d=diff_desc(self.diff.value)))
         self.scalables.append(self.diff)
-        self.text(label(S, '', F['label']), 'mode').grid(row=2, column=0, sticky='w', pady=(0, 4))
-        self.mode = self.cfg.get('mode', DEFAULT_MODE)
-        self.rows = []
-        for i in range(len(MODE_KEYS)):
-            r = OptRow(S, '', i, self.set_mode)
-            r.set_enabled(mode_ok(i))
-            r.grid(row=3 + i, column=0, sticky='ew', pady=1)
-            Tip(r, lambda i=i: self.mode_text(i))
-            self.rows.append(r)
-            self.scalables.append(r)
-        n = 3 + len(MODE_KEYS)
-        self.text(label(S, '', F['title']), 'go').grid(row=n, column=0, sticky='w', pady=(14, 4))
+
+        def column(c, padx):
+            f = tk.Frame(S, bg=CARD)
+            f.grid(row=2, column=c, sticky='new', padx=padx)
+            f.columnconfigure(0, weight=1)
+            return f
+
+        G = column(0, (0, 8))
+        self.text(label(G, '', F['title']), 'go').grid(row=0, column=0, sticky='w', pady=(0, 4))
         self.gomode = self.cfg.get('go', DEFAULT_GO)
         if self.gomode not in GO_KEYS:
             self.gomode = DEFAULT_GO
         self.go_rows = {}
         for i, k in enumerate(GO_KEYS):
-            r = OptRow(S, '', k, self.set_go)
-            r.grid(row=n + 1 + i, column=0, sticky='ew', pady=1)
+            r = OptRow(G, '', k, self.set_go)
+            r.grid(row=1 + i, column=0, sticky='ew', pady=1)
             Tip(r, lambda k=k: tr('go_desc')[k])
             self.go_rows[k] = r
             self.scalables.append(r)
-        n += 1 + len(GO_KEYS)
-        self.text(label(S, '', F['title']), 'extras').grid(row=n, column=0, sticky='w', pady=(14, 4))
-        self.anti = bool(self.cfg.get('antisoftlock', False))
-        self.anti_row = OptRow(S, '', 'anti', self.toggle_anti, box=True)
-        self.anti_row.grid(row=n + 1, column=0, sticky='ew', pady=1)
-        Tip(self.anti_row, lambda: tr('anti_desc'))
-        self.scalables.append(self.anti_row)
-        self.skip = bool(self.cfg.get('skipsomulo', False))           # Skip Somulo (Asvel/Neitan, 01/10)
-        self.skip_row = OptRow(S, '', 'skip', self.toggle_skip, box=True)
-        self.skip_row.grid(row=n + 2, column=0, sticky='ew', pady=1)
-        Tip(self.skip_row, lambda: tr('skip_desc'))
-        self.scalables.append(self.skip_row)
-        # extras do handoff de 29/09 (Fire Crest / crest inicial / cabeçada): na janela, mas travados até a ROM ter
-        self.soon_rows = []
-        for i, k in enumerate(('x_crest', 'x_head')):
-            r = OptRow(S, '', k, None, box=True)
-            r.set_enabled(False)
-            r.grid(row=n + 3 + i, column=0, sticky='ew', pady=1)
-            Tip(r, lambda k=k: tr(k + '_desc') + '\n\n' + tr('not_yet'))
-            self.soon_rows.append((r, k))
+        M = column(1, (8, 0))
+        self.text(label(M, '', F['title']), 'mode').grid(row=0, column=0, sticky='w', pady=(0, 4))
+        self.mode = self.cfg.get('mode', DEFAULT_MODE)
+        self.rows = []
+        for i in range(len(MODE_KEYS)):
+            r = OptRow(M, '', i, self.set_mode)
+            r.set_enabled(mode_ok(i))
+            r.grid(row=1 + i, column=0, sticky='ew', pady=1)
+            Tip(r, lambda i=i: self.mode_text(i))
+            self.rows.append(r)
             self.scalables.append(r)
+
+        self.text(label(S, '', F['title']), 'extras').grid(row=3, column=0, columnspan=2, sticky='w', pady=(14, 4))
+        X = tk.Frame(S, bg=CARD)
+        X.grid(row=4, column=0, columnspan=2, sticky='ew')
+        X.columnconfigure(0, weight=1, uniform='x')
+        X.columnconfigure(1, weight=1, uniform='x')
+
+        def extra(i, r):
+            r.grid(row=i // 2, column=i % 2, sticky='ew', pady=1, padx=(0, 4) if i % 2 == 0 else (4, 0))
+            self.scalables.append(r)
+            return r
+        self.anti = bool(self.cfg.get('antisoftlock', False))
+        self.anti_row = extra(0, OptRow(X, '', 'anti', self.toggle_anti, box=True))
+        Tip(self.anti_row, lambda: tr('anti_desc'))
+        self.skip = bool(self.cfg.get('skipsomulo', False))           # Skip Somulo (Asvel/Neitan, 01/10)
+        self.skip_row = extra(1, OptRow(X, '', 'skip', self.toggle_skip, box=True))
+        Tip(self.skip_row, lambda: tr('skip_desc'))
+        self.crest = bool(self.cfg.get('startcrest', False))          # crest inicial sorteada (0.3.2)
+        self.crest_row = extra(2, OptRow(X, '', 'x_crest', self.toggle_crest, box=True))
+        Tip(self.crest_row, lambda: tr('x_crest_desc'))
+        # Head Butt como item (04/10, head_butt.py): cabeçada só com a Skull equipada
+        self.soon_rows = []
+        self.head = bool(self.cfg.get('headbutt', False))
+        self.head_row = extra(3, OptRow(X, '', 'x_head', self.toggle_head, box=True))
+        Tip(self.head_row, lambda: tr('x_head_desc'))
         return S
 
     # --- guia Avançado (30/09): só interface por enquanto; as opções ficam salvas na config
     def build_adv(self, master):
-        A = tk.Frame(master, bg=CARD)
+        """Duas colunas (03/10, Neitan: a janela cresce na largura, não na altura): opções | Progressão."""
+        W = tk.Frame(master, bg=CARD)
+        W.columnconfigure(0, weight=6, uniform='a')     # um pouco mais pras opções (nota "em breve" da pool)
+        W.columnconfigure(1, weight=5, uniform='a')
+        A = tk.Frame(W, bg=CARD)
+        A.grid(row=0, column=0, sticky='new', padx=(0, 10))
         A.columnconfigure(1, weight=1)
         self.adv = adv_clean(self.cfg.get('adv'))
         self.presets = [p for p in self.cfg.get('presets', []) if isinstance(p, dict) and p.get('name')
@@ -1439,15 +1761,19 @@ class App:
 
         for key in ADV_FIELDS:
             if key == 'pool':
-                name_label(key, row, pady=(6, 2), columnspan=2)
+                name_label(key, row, pady=(6, 2))
                 box = tk.Frame(A, bg=CARD)
                 box.grid(row=row + 1, column=0, columnspan=2, sticky='ew')
                 box.columnconfigure(0, weight=1, uniform='p')
                 box.columnconfigure(1, weight=1, uniform='p')
                 self.pool_rows = {}
                 for i, k in enumerate(POOL_KEYS + ('rando',)):
-                    r = OptRow(box, '', k, self.adv_pool, box=True)
-                    r.grid(row=i // 2, column=i % 2, sticky='ew', pady=1, padx=(0, 4) if i % 2 == 0 else (4, 0))
+                    r = OptRow(A if k == 'rando' else box, '', k, self.adv_pool, box=True)
+                    if k == 'rando':                       # na linha do título (03/10: uma linha a menos)
+                        r.grid(row=row, column=1, sticky='ew', pady=(6, 2))
+                    else:
+                        r.grid(row=i // 2, column=i % 2, sticky='ew', pady=1,
+                               padx=(0, 4) if i % 2 == 0 else (4, 0))
                     r.bind('<Enter>', lambda _: self.adv_hover('pool'), add='+')
                     self.pool_rows[k] = r
                     self.scalables.append(r)
@@ -1460,11 +1786,13 @@ class App:
                 f.columnconfigure(0, weight=1)
                 w = Dropdown(f, self.preset_keys(), self.preset_name, self.adv['preset'], self.adv_pick_preset)
                 w.grid(row=0, column=0, sticky='ew')
-                self.load_btn = RButton(f, tr('load'), self.load_preset, F['base'], padx=12, pady=6)
-                self.load_btn.grid(row=0, column=1, padx=(8, 0))
-                Tip(self.load_btn, lambda: tr('load_tip'))
-                self.load_btn.bind('<Enter>', lambda _: self.adv_hover('preset'), add='+')
-                self.scalables.append(self.load_btn)
+                self.load_btn = IconButton(f, 'load', self.load_preset, F['base'], pady=6)
+                self.save_btn = IconButton(f, 'save', self.save_preset, F['base'], pady=6)
+                for i, (b, tip) in enumerate(((self.load_btn, 'load_tip'), (self.save_btn, 'save_tip'))):
+                    b.grid(row=0, column=1 + i, padx=(6, 0))
+                    Tip(b, lambda t=tip: tr(t))
+                    b.bind('<Enter>', lambda _: self.adv_hover('preset'), add='+')
+                    self.scalables.append(b)
             elif key == 'density':
                 w = Slider(A, self.adv['density'], lambda v: self.adv_set('density', v))
                 w.grid(row=row, column=1, sticky='ew', pady=2)
@@ -1477,7 +1805,72 @@ class App:
             self.adv_w[key] = w
             self.scalables.append(w)
             row += 1
-        return A
+        self.build_prog(W).grid(row=0, column=1, sticky='new', padx=(10, 0))
+        return W
+
+    def build_prog(self, master):
+        """Progressão estilo Map Rando (Neitan, 03/10): Ritmo, Colocação, Intensidade, Prioridade por item e
+        Filler no início (nome do Neitan, 03/10; era "Enchimento cedo")."""
+        P = tk.Frame(master, bg=CARD)
+        P.columnconfigure(1, weight=1)
+
+        def name_label(key, r, font='label', fg=TEXT, **grid):
+            lb = self.text(label(P, '', F[font], fg=fg), ('adv_names', key))
+            lb.grid(row=r, column=0, sticky='w', padx=(0, 12), **grid)
+            lb.bind('<Enter>', lambda _: self.adv_hover(key), add='+')
+            return lb
+
+        name_label('prog', 0, fg=CYAN, pady=(2, 4), columnspan=2)
+        for i, key in enumerate(PROG_FIELDS, 1):
+            name_label(key, i, pady=2)
+            w = Dropdown(P, ADV_CHOICES[key], lambda k, f=key: adv_value(f, k), self.adv[key],
+                         lambda v, f=key: self.adv_set(f, v))
+            w.grid(row=i, column=1, sticky='ew', pady=2)
+            w.bind('<Enter>', lambda _, k=key: self.adv_hover(k), add='+')
+            self.adv_w[key] = w
+            self.scalables.append(w)
+        row = len(PROG_FIELDS) + 1
+
+        def grid_box(key, r):
+            name_label(key, r, pady=(8, 2), columnspan=2)
+            box = tk.Frame(P, bg=CARD)
+            box.grid(row=r + 1, column=0, columnspan=2, sticky='ew')
+            box.columnconfigure(0, weight=1, uniform='g')
+            box.columnconfigure(1, weight=1, uniform='g')
+            return box
+
+        box = grid_box('prio', row)
+        self.prio_rows = {}
+        for i, it in enumerate(R.PRIO_ITEMS):
+            r = PrioRow(box, it, item_name, self.adv['prio'].get(it, 'default'), self.adv_prio)
+            r.grid(row=i // 2, column=i % 2, sticky='ew', pady=2, padx=(0, 4) if i % 2 == 0 else (4, 0))
+            r.bind('<Enter>', lambda _: self.adv_hover('prio'), add='+')
+            self.prio_rows[it] = r
+            self.scalables.append(r)
+        name_label('early', row + 2, pady=(10, 2))
+        w = MultiDropdown(P, R.EARLY_ITEMS, item_name, self.adv['early'], self.adv_early, lambda: tr('early_none'),
+                          locked=lambda: self.adv_locked('early'))
+        w.grid(row=row + 2, column=1, sticky='ew', pady=(10, 2))
+        w.bind('<Enter>', lambda _: self.adv_hover('early'), add='+')
+        self.adv_w['early'] = w
+        self.scalables.append(w)
+        return P
+
+    def adv_prio(self, item, state):
+        if state == 'default':
+            self.adv['prio'].pop(item, None)
+        else:
+            self.adv['prio'][item] = state
+        self.adv['preset'] = 'custom'
+        self.adv_changed('prio')
+
+    def adv_early(self, item):
+        if item in self.adv_locked('early'):
+            return
+        early = set(self.adv['early']) ^ {item}
+        self.adv['early'] = [k for k in R.EARLY_ITEMS if k in early]
+        self.adv['preset'] = 'custom'
+        self.adv_changed('early')
 
     def preset_keys(self):
         return ['custom'] + [p['name'] for p in self.presets]
@@ -1498,6 +1891,8 @@ class App:
             out['no'] = tr('locked_anti')
         if no_crests and field in ('starter', 'removal'):
             out.update({k: tr('locked_crests') for k in ADV_CHOICES[field] if k not in ('vanilla', 'none')})
+        if field == 'early' and self.adv['head'] != 'no':   # Skull = item-chave: nunca filler (Neitan, 04/10)
+            out['Skull'] = tr('locked_key')
         return out
 
     def refresh_adv(self):
@@ -1516,8 +1911,12 @@ class App:
             else:
                 r.set_enabled(not rando)
                 r.select(not rando and k in self.adv['pool'])
+        for it, r in self.prio_rows.items():
+            r.set(self.adv['prio'].get(it, 'default'))
         fixed = not rando and adv_needs_crests(self.adv)
         self.pool_rows['crests'].set_text(tr('pool_names')['crests'], tr('fixed_crests') if fixed else '')
+        fixed_t = not rando and adv_needs_talisman(self.adv)
+        self.pool_rows['talisman'].set_text(tr('pool_names')['talisman'], tr('fixed_crests') if fixed_t else '')
         self.update_info()
 
     def adv_changed(self, key):
@@ -1528,13 +1927,17 @@ class App:
     def adv_set(self, key, v):
         """Opção mexida à mão: a dificuldade e o preset viram Custom."""
         self.adv[key] = v
-        if key == 'level':                                  # separado da Dificuldade: ela não vira Custom
+        if key in ADV_OWN:                        # Nível da lógica e Progressão: a Dificuldade não vira Custom
             self.adv['preset'] = 'custom'
             return self.adv_changed(key)
         if key == 'removal' and v != 'none' and self.adv['goal'] == 'crests':   # "4 crests" não vai com remoção
             self.adv['goal'] = DEFAULT_GO
         if key == 'removal' and v == '4':                  # Air e Tornado sempre fora: Anti-Softlock obrigatório
             self.adv['anti'] = 'yes'
+        if key == 'head' and v != 'no' and 'talisman' not in self.adv['pool']:   # Skull = item de progressão
+            self.adv['pool'] = [k for k in POOL_KEYS if k in self.adv['pool'] + ['talisman']]
+        if key == 'head' and v != 'no' and 'Skull' in self.adv['early']:          # e nunca filler
+            self.adv['early'] = [k for k in self.adv['early'] if k != 'Skull']
         self.adv['diff'] = self.adv['preset'] = 'custom'
         self.adv_changed(key)
 
@@ -1552,7 +1955,8 @@ class App:
         else:
             pool = self.adv['pool']
             if k in pool:
-                if len(pool) == 1 or (k == 'crests' and adv_needs_crests(self.adv)):   # pelo menos uma categoria;
+                if len(pool) == 1 or (k == 'crests' and adv_needs_crests(self.adv)) or \
+                        (k == 'talisman' and adv_needs_talisman(self.adv)):        # pelo menos uma categoria;
                     return                                                          # Crests presas (crest inicial)
                 pool.remove(k)
             else:
@@ -1587,9 +1991,38 @@ class App:
             raise ValueError('JSON sem opções')
         name = name or str(d.get('name') or os.path.splitext(os.path.basename(path))[0])
         self.adv = adv_clean(d.get('advanced', d))
+        self.remember_preset(name, path)
+
+    def remember_preset(self, name, path):
+        """O preset vira o escolhido e entra na lista (o mesmo nome substitui o antigo, no mesmo lugar)."""
         self.adv['preset'] = name
-        self.presets = [p for p in self.presets if p['name'] != name] + [{'name': name, 'path': path}]
+        new = {'name': name, 'path': path}
+        names = [p['name'] for p in self.presets]
+        if name in names:
+            self.presets[names.index(name)] = new
+        else:
+            self.presets.append(new)
         self.adv_changed('preset')
+
+    def write_preset(self, path):
+        """Opções do Avançado -> .json no formato que apply_preset lê; nome = nome do arquivo."""
+        name = os.path.splitext(os.path.basename(path))[0]
+        adv = {k: v for k, v in self.adv.items() if k != 'preset'}
+        with open(path, 'w', encoding='utf-8') as fh:
+            json.dump({'name': name, 'advanced': adv}, fh, ensure_ascii=False, indent=2)
+        self.remember_preset(name, path)
+
+    def save_preset(self):
+        cur = self.adv['preset']
+        path = filedialog.asksaveasfilename(parent=self.root, title=tr('save_title'), initialdir=HOME,
+                                            initialfile=(cur if cur != 'custom' else 'Preset') + '.json',
+                                            defaultextension='.json', filetypes=[('Preset DCOR', '*.json')])
+        if not path:
+            return
+        try:
+            self.write_preset(path)
+        except OSError as e:
+            self.dialog(tr('error_title'), tr('preset_save_bad', e=e), accent=ERR)
 
     def load_preset(self):
         path = filedialog.askopenfilename(parent=self.root, title=tr('load_title'), initialdir=HOME,
@@ -1610,6 +2043,14 @@ class App:
             v = (self.preset_name(self.adv['preset']) if key == 'preset' else pool if key == 'pool' else
                  str(self.adv['density']) if key == 'density' else adv_value(key, self.adv[key]))
             lines.append(f'{names[key]}: {v}')
+        for key in PROG_FIELDS:
+            lines.append(f'{names[key]}: {adv_value(key, self.adv[key])}')
+        prio = '; '.join(f"{tr('adv_values')[st]}: " + ', '.join(it for it in R.PRIO_ITEMS
+                                                                  if self.adv['prio'].get(it) == st)
+                         for st in ('early', 'late') if st in self.adv['prio'].values())
+        lines.append(f"{names['prio']}: {prio or tr('prio_none')}")
+        lines.append(f"{names['early']}: " + (', '.join(item_name(it) for it in self.adv['early'])
+                                               or tr('early_none')))
         out = ''
         if self.adv_focus:
             out = f"{names[self.adv_focus]}\n{tr('adv_desc')[self.adv_focus]}"
@@ -1622,8 +2063,8 @@ class App:
         self.tab = tab
         self.tabs.value = tab
         self.tabs.draw()
-        self.logic_inner.columnconfigure(0, weight=3 if tab == 'adv' else 1)    # Avançado: rótulo + controle por
-        self.logic_inner.columnconfigure(1, weight=2 if tab == 'adv' else 1)    # linha, precisa de mais largura
+        self.logic_inner.columnconfigure(0, weight=5 if tab == 'adv' else 3)    # opções em duas colunas (as duas
+        self.logic_inner.columnconfigure(1, weight=2)                           # guias) | descrição
         for k, p in self.page.items():
             if k == tab:
                 p.grid(row=0, column=0, sticky='nsew')
@@ -1635,7 +2076,8 @@ class App:
 
     def save(self):
         self.cfg.update(lang=LANG, tab=self.tab, mode=self.mode, diff=self.diff.value, go=self.gomode,
-                        antisoftlock=self.anti, skipsomulo=self.skip, adv=self.adv, presets=self.presets)
+                        antisoftlock=self.anti, skipsomulo=self.skip, startcrest=self.crest, headbutt=self.head, adv=self.adv,
+                        presets=self.presets)
         save_config(self.cfg)
 
     # --- idioma: troca na hora, sem reiniciar
@@ -1651,8 +2093,7 @@ class App:
         for w, k in self.texts:
             w.configure(text=tr(k[0])[k[1]] if isinstance(k, tuple) else tr(k))
         self.seed.set_placeholder(tr('seed_ph'))
-        for b, k in ((self.roll, 'roll'), (self.go, 'busy' if self.busy else 'generate'), (self.about_btn, 'about'),
-                     (self.load_btn, 'load')):
+        for b, k in ((self.roll, 'roll'), (self.go, 'busy' if self.busy else 'generate'), (self.about_btn, 'about')):
             b.set_text(tr(k))
         for i, r in enumerate(self.rows):
             r.set_text(tr('modes')[i], '' if mode_ok(i) else tr('soon'))
@@ -1660,10 +2101,14 @@ class App:
             r.set_text(go_name(k))
         self.anti_row.set_text(tr('anti'))
         self.skip_row.set_text(tr('skip'))
+        self.crest_row.set_text(tr('x_crest'))
+        self.head_row.set_text(tr('x_head'))
         for r, k in self.soon_rows:
             r.set_text(tr(k), tr('soon'))
         for k, r in self.pool_rows.items():
             r.set_text(tr('pool_names')[k], tr('soon') if k in POOL_SOON else '')
+        for r in self.prio_rows.values():
+            r.draw()
         for w in list(self.adv_w.values()) + [self.tabs]:
             w.draw()
         self.set_diff(self.diff.value, first=True)       # nota do "4 crests" e painel de descrição
@@ -1680,26 +2125,128 @@ class App:
             self.about()
 
     # --- tamanho: letras e alturas acompanham a janela
+    @staticmethod
+    def collect_pads(top):
+        """Folgas (padx/pady/ipadx/ipady) de todo widget posto com grid ou pack, como foram escritas (escala 1)."""
+        out = []
+        todo = [top]
+        while todo:
+            w = todo.pop()
+            todo += w.winfo_children()
+            mgr = w.winfo_manager()
+            if mgr not in ('grid', 'pack'):
+                continue
+            info = w.grid_info() if mgr == 'grid' else w.pack_info()
+            pads = {}
+            for k in ('padx', 'pady', 'ipadx', 'ipady'):
+                v = tuple(int(float(x)) for x in str(info.get(k, 0)).replace('(', ' ').replace(')', ' ')
+                          .replace(',', ' ').split()) if k in info else ()
+                if any(v):
+                    pads[k] = v
+            if pads:
+                out.append((w, mgr, pads))
+        return out
+
     def apply_scale(self, s):
         self.scale = s
         scale_fonts(s)
         for w in self.scalables:
             w.rescale()
+        for w, mgr, pads in getattr(self, 'pads', ()):
+            if w.winfo_manager() == mgr:           # escondido (grid_remove) fica: reaplicar mostraria de novo
+                new = {k: tuple(z(x) for x in v) if len(v) > 1 else z(v[0]) for k, v in pads.items()}
+                (w.grid_configure if mgr == 'grid' else w.pack_configure)(**new)
+        self.info.configure(padx=z(14), pady=z(12))
+        for c in self.cards:
+            c.rescale()
         self.root.update_idletasks()
         for c in self.cards:                       # altura dos cartões = conteúdo (sem esperar o evento)
             c.fit()
         self.root.update_idletasks()
 
     def relayout(self):
-        """Escala das letras pela largura da janela; o conteúdo ocupa no mínimo a área visível e, se passar dela, as
-        barras de rolagem aparecem (29/09: antes a janela não encolhia além do conteúdo)."""
+        """Escala (letras, folgas e margens, como um zoom): a maior em que o conteúdo da guia aberta cabe na janela
+        (largura: NAT_W; altura: a medida agora, proporcional à escala). O conteúdo ocupa no mínimo a área visível
+        e, se passar dela, as barras de rolagem aparecem (29/09). 03/10 (Neitan): era só pela largura (alargar aumentava
+        a letra e a altura junto, e o conteúdo passava da janela); depois, pela menor proporção da janela contra um
+        tamanho fixo de 1120 x 950, o que encolhia tudo numa janela mais estreita mesmo sobrando espaço."""
+        if self._laying:                       # chamado de dentro de si mesmo (apply_scale processa os eventos de
+            self._again = True                 # tamanho na hora): roda de novo depois, fora daqui
+            return
+        self._laying = True
+        try:
+            self._relayout()
+        finally:
+            self._laying = False
+        if self._again:
+            self._again = False
+            self.root.after_idle(self.relayout)
+
+    def _relayout(self):
         vw, vh = self.view.winfo_width(), self.view.winfo_height()
         if vw < 10:
             return
-        s = max(MIN_S, min(MAX_S, vw / BASE_W))
-        if abs(s - self.scale) >= 0.03:
-            self.apply_scale(s)
-        cw = max(vw, self.body.winfo_reqwidth(), round(MIN_CONTENT_W * MIN_S))
+        # teto por tamanho da área visível com as barras (não o da janela: logo depois de mudar ela já tem o tamanho
+        # novo e a área ainda o antigo, e o teto do tamanho velho travava a escala no novo)
+        key = (vw + (self.vbar.winfo_width() if self.vbar.visible else 0),
+               vh + (self.hbar.winfo_height() if self.hbar.visible else 0), self.tab, LANG)
+        if key != self._fit_key:               # janela (ou guia/idioma) mudou: esquece o teto
+            self._fit_key, self._ceil = key, MAX_S
+        # a maior escala em que o conteúdo cabe (na altura e na largura), na mesma rodada (o arrasto só chama isto
+        # quando a borda para). A letra muda em pontos inteiros, então a altura anda aos saltos: o palpite
+        # proporcional dá o ponto de partida e a busca fecha entre a maior que coube (lo) e a menor que não (hi)
+        wmax = max(MIN_S, min(MAX_S, vw / NAT_W[self.tab]))
+        top = min(wmax, self._ceil)
+        lo = hi = None
+        for _ in range(6):
+            h = self.body.winfo_reqheight()
+            if h <= vh and self.scale <= wmax + 0.001:
+                lo = self.scale
+            else:
+                hi = self.scale
+                if h > vh:                     # passou da altura: teto deste tamanho de janela (sem oscilar)
+                    self._ceil = min(self._ceil, self.scale - 0.01)
+                    top = min(top, self._ceil)
+                if self.scale <= MIN_S:
+                    break                      # nem na menor cabe: fica nela e rola
+            guess = vh * self.scale / max(1, h)
+            if lo is None:
+                cand = min(guess, top, hi - 0.02)
+            elif hi is None:
+                cand = min(max(guess, lo), top)
+            else:
+                cand = (lo + hi) / 2
+            cand = max(MIN_S, min(MAX_S, int(cand * 100) / 100))
+            if lo is not None and cand - lo < 0.02:
+                break                          # ganho pequeno demais pra refazer tudo
+            if cand == self.scale:
+                break
+            self.apply_scale(cand)
+            self.rewrap()
+        if lo is not None and self.scale != lo:
+            self.apply_scale(lo)               # a última tentativa não coube: volta pra maior que coube
+            self.rewrap()
+        self.place_content()
+
+    def rewrap(self):
+        """Quebra da descrição pela largura de agora e cartões na altura nova, sem esperar os eventos."""
+        self.root.update_idletasks()
+        w = max(80, self.info.winfo_width() - 28)
+        if getattr(self, '_wrap', None) != w:
+            self._wrap = w
+            self.info.configure(wraplength=w)
+            self.root.update_idletasks()
+            for c in self.cards:
+                c.fit()
+            self.root.update_idletasks()
+
+    def place_content(self):
+        """Conteúdo do tamanho da área visível (no mínimo o que ele pede) e barras de rolagem: barato, roda a cada
+        evento de tamanho."""
+        vw, vh = self.view.winfo_width(), self.view.winfo_height()
+        if vw < 10:
+            return
+        cw = max(vw, round(NAT_W[self.tab] * self.scale))
         ch = max(vh, self.body.winfo_reqheight())
         if (cw, ch) != getattr(self, '_content', None):
             self._content = cw, ch
@@ -1712,10 +2259,31 @@ class App:
         if (self.vbar if axis == 'y' else self.hbar).visible and str(e.widget).startswith(str(self.root)):
             (self.view.yview_scroll if axis == 'y' else self.view.xview_scroll)(int(-e.delta / 120) * 3, 'units')
 
+    def on_resize(self):
+        """Evento de tamanho: o conteúdo fica parado enquanto a janela muda (no Windows cada componente é uma janela
+        nativa: esticar ~200 delas a cada passo do arrasto travava, 03/10) e se ajusta de uma vez quando parar
+        (settle: tamanho e escala)."""
+        if self._laying:                       # eventos do próprio relayout: ele mesmo termina o serviço
+            return
+        self.settle_later()
+
+    def settle_later(self):
+        if self._settle_job:
+            self.root.after_cancel(self._settle_job)
+        self._settle_job = self.root.after(SETTLE_MS, self.settle)
+
+    def settle(self):
+        self._settle_job = None
+        self.refit()
+
     def info_wrap(self, e):
-        """A descrição quebra linha pela largura dela; a altura nova faz o cartão crescer (e a janela rolar)."""
-        self.info.configure(wraplength=max(80, e.width - 28))
-        self.root.after_idle(self.refit)
+        """A descrição quebra linha pela largura dela; a altura nova faz o cartão crescer (e a janela rolar). O ajuste
+        dos cartões espera o tamanho parar de mudar (settle_later)."""
+        w = max(80, e.width - 28)
+        if getattr(self, '_wrap', None) != w:
+            self._wrap = w
+            self.info.configure(wraplength=w)
+        self.settle_later()
 
     def refit(self):
         """Cartões na altura do conteúdo de novo e a área que rola recalculada (o texto pode ter encolhido)."""
@@ -1760,6 +2328,18 @@ class App:
         self.update_info()
         self.save()
 
+    def toggle_crest(self, _k):
+        self.crest = not self.crest
+        self.crest_row.select(self.crest)
+        self.update_info()
+        self.save()
+
+    def toggle_head(self, _k):
+        self.head = not self.head
+        self.head_row.select(self.head)
+        self.update_info()
+        self.save()
+
     def toggle_skip(self, _k):
         self.skip = not self.skip
         self.skip_row.select(self.skip)
@@ -1783,7 +2363,9 @@ class App:
         v = self.diff.value
         self.info.configure(text=tr('info', m=self.mode_text(self.mode), v=v, d=diff_desc(v), g=go_name(self.gomode),
                                     a=tr('anti'), s=tr('on') if self.anti else tr('off'), k=tr('skip'),
-                                    ks=tr('on') if self.skip else tr('off')))
+                                    ks=tr('on') if self.skip else tr('off'), c=tr('x_crest'),
+                                    cs=tr('on') if self.crest else tr('off'), h=tr('x_head'),
+                                    hs=tr('on') if self.head else tr('off')))
         self.go.set_enabled(mode_ok(self.mode) and not self.busy)
 
     def roll_seed(self):
@@ -1885,7 +2467,8 @@ class App:
         if self.tab == 'adv':
             job = (write_seed_adv, name, van, json.loads(json.dumps(self.adv)))
         else:
-            job = (write_seed, name, van, self.mode, self.diff.value, self.gomode, self.anti, None, self.skip)
+            job = (write_seed, name, van, self.mode, self.diff.value, self.gomode, self.anti, None, self.skip,
+                   self.crest, self.head)
         threading.Thread(target=self.work, args=job, daemon=True).start()
         self.root.after(100, self.poll)
 
@@ -1912,12 +2495,13 @@ class App:
 def main():
     if '--seed' in sys.argv:        # sem janela (conferência):
         # "Demon's Crest Open Randomizer.exe" --seed "Nome Da Seed" [--modo limitado|classico|extra] [--dif 1-5]
-        #   [--go vellum|bosses|crests|hp] [--anti 1] [--skip 1] [--home PASTA]
+        #   [--go vellum|bosses|crests|hp] [--anti 1] [--skip 1] [--crest 1] [--head 1] [--home PASTA]
         a = dict(zip(sys.argv[1::2], sys.argv[2::2]))
         home = a.get('--home', HOME)
         mode = MODE_KEYS.index(a.get('--modo', 'extra'))
         write_seed(a['--seed'], find_rom(home)[0], mode, int(a.get('--dif', DEFAULT_DIFF)), a.get('--go', DEFAULT_GO),
-                   a.get('--anti', '0') == '1', home, a.get('--skip', '0') == '1')
+                   a.get('--anti', '0') == '1', home, a.get('--skip', '0') == '1', a.get('--crest', '0') == '1',
+                   a.get('--head', '0') == '1')
         return
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(1)                   # texto nítido em tela com escala

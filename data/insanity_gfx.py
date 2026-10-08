@@ -100,10 +100,31 @@ def tiles_of(vram, units):
     return {vram + 2 * k + d for k in range(units) for d in (0, 1, 16, 17)}
 
 
-def apply(rom, van_bytes, ids):
-    """rom: bytearray da ROM do Insanity (4 MB, itens já gravados); ids: check -> id do item. Devolve linhas."""
+def apply(rom, van_bytes, ids, skip_somulo=False):
+    """rom: bytearray da ROM do Insanity (4 MB, itens já gravados); ids: check -> id do item. Devolve linhas.
+    skip_somulo: o item do Somulo nasce na área 1 (insanity_rom.somulo_spawn), não na 17: o gráfico dele é planejado
+    lá (Neitan, 04/10: aparecia com o desenho do que estivesse na VRAM, ex.: a Ground da Earth inicial)."""
     van = v.Rom(van_bytes)
-    lines = []
+    records, all_recs, lines, _ = plan_all(van, ids, skip_somulo)
+    write(rom, van, records, all_recs, lines)
+    apply.records = [r for r in all_recs if not r.get('dropped')]
+    return lines
+
+
+def missing(van_bytes, ids, skip_somulo=False):
+    """Checks cujo item ficaria sem gráfico próprio (desenho errado no jogo). O gerador refaz a seed se houver
+    (08/10, seed "Grewon Crest Ovnunu Time Crown": 3 crests + Vellum nos potes da área 13, a Vellum sem VRAM)."""
+    if not isinstance(van_bytes, v.Rom):
+        van_bytes = v.Rom(van_bytes)
+    return plan_all(van_bytes, ids, skip_somulo)[3]
+
+
+def plan_all(van, ids, skip_somulo=False):
+    """Planejamento de apply sem gravar: (registros por área, todos os registros, linhas, checks sem gráfico)."""
+    info = dict(GFX_INFO)
+    if skip_somulo:
+        info['Somulo (cabeça)'] = ([1], 'MidStage', 'Hp', True)        # como o Hippogriff 1 (drop de chefe na área 1)
+    lines, lost = [], []
     pref_sprite = {}
     for sid in (0x4D, 0x4E, 0x4F, 0x50):
         cnt = cp.item_palettes(van)[0].get(sid)
@@ -113,7 +134,7 @@ def apply(rom, van_bytes, ids):
 
     # candidatos por área (a área "dona" é a 1ª da lista; gêmeas com as mesmas tabelas recebem o mesmo registro)
     wanted = []
-    for loc, (areas, vlist, vitem, boss) in GFX_INFO.items():
+    for loc, (areas, vlist, vitem, boss) in info.items():
         i = ids[loc]
         type_, sub = i & 0xFF, (i >> 8) & 0x3F
         if P.item_def(van, type_, sub) is None:
@@ -137,6 +158,7 @@ def apply(rom, van_bytes, ids):
             if len(placed) >= K or E < 2 * used:
                 out.append('%-22s área %3d: sem entrada de sprite livre (área usa %d), comportamento original'
                            % (loc, area, used))
+                lost.append(loc)
                 continue
             name, sid, tset, qs, anim = P.item_def(van, type_, sub)
             twin = next((q for q in placed if (q['sid'], q['tset'], tuple(q['qs'])) == (sid, tset, tuple(qs))), None)
@@ -148,6 +170,7 @@ def apply(rom, van_bytes, ids):
                 r = plan(van, loc, area, vlist, vitem, boss, type_, sub, occupied, pref_sprite, out, no_sparkle)
                 if r is None:
                     failed = True
+                    lost.append(loc)
                     continue
                 occupied |= tiles_of(r['vram'], r['units'])
             r['E'] = E
@@ -155,11 +178,16 @@ def apply(rom, van_bytes, ids):
         return placed, out, failed
 
     for key, ws in by_area.items():
+        n0 = len(lost)
         placed, out, failed = plan_area(key, ws, False)
         if failed:                                    # área apertada: todos só com o desenho parado (1 unidade)
+            n1 = len(lost)
             placed2, out2, failed2 = plan_area(key, ws, True)
             if len(placed2) > len(placed):
                 placed, out = placed2, out2 + ['   (área apertada: itens sem brilho para caber mais)']
+                del lost[n0:n1]
+            else:
+                del lost[n1:]
         lines.extend(out)
         all_recs.extend(placed)
         for r in placed:
@@ -167,9 +195,7 @@ def apply(rom, van_bytes, ids):
                 if keys[a2] == key:
                     records.setdefault(a2, []).append(r)
 
-    write(rom, van, records, all_recs, lines)
-    apply.records = [r for r in all_recs if not r.get('dropped')]
-    return lines
+    return records, all_recs, lines, lost
 
 
 def expected_tiles(van, r):

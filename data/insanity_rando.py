@@ -22,14 +22,19 @@ from collections import Counter
 START_HP = 4
 VELLUMS_FOR_CASTLE = 5
 
-# (nome, área, origem na ROM, item original, requisito). Lógica V4 (Neitan, 02/10, lógica_demonRando_V4.md): os
-# requisitos citam capacidades (CAN); '/' = ou, ',' = e. Os locais novos do modo Insano da V4 ainda não entram.
+# (nome, área, origem na ROM, item original, requisito). Lógica V6 (Neitan, 04/10, lógica_demonRando_V6.md; V5 e V4
+# antes): os requisitos citam capacidades (CAN); '/' = ou, ',' = e. Os locais novos do modo Insano ainda não entram.
+# V6: canFly aplicado na Fase 4 (área 19 e o resto da fase pedem gárgula com asas: recarga da área 19, Flier 1,
+# Hippogriff 2, Crown, Vellum 06, Arma 2); pote 20G da área 18 pede canFly ou 6+ HP (Neitan, 08/10);
+# as áreas de baixo da Fase 3 (Skulla e potes da área 13) pedem 8+ HP.
+# V5: canHeadbutt entra na Vellum 00, Skulla, Crown, recarga da área 11, Vellum 04, potes da área 13, Skull, HP 0F,
+# Flier 2, Armor, Arma 3 e Sino HP 10 (os quebráveis $A0 só quebram com a cabeçada, 80:E54A -> 80:F30E).
 LOCATIONS = [
     ('Trio the Pago', '52-54', 'código BC:A13E', 'HP', 'n/a'),
     # Fase 1
     ('Somulo (cabeça)', '17', 'código 83:96D3', 'HP', 'n/a'),
     ('Pote 20G área 1', '1', 'pote 392,376', '20G', 'n/a'),
-    ('Estátua Vellum 00', '1', 'quebrável $A0 81:B4F9', 'Vellum', 'n/a'),
+    ('Estátua Vellum 00', '1', 'quebrável $A0 81:B4F9', 'Vellum', 'canHeadbutt'),
     ('Hippogriff 1', '1', 'código 82:9999', 'HP', 'canHeadbutt'),
     ('Potion 0A', '2', 'objeto 1624,392', 'Potion', 'n/a'),
     ('HP 07 chão', '3', 'objeto 432,440', 'HP', 'canBreakeblocks'),
@@ -51,24 +56,24 @@ LOCATIONS = [
     ('Pote 20G área 10 b', '10', 'pote 784,360', '20G', 'n/a'),
     ('Pote 20G área 10 c', '10', 'pote 840,104', '20G', 'n/a'),
     ('Potion 0E', '10', 'objeto 1133,200', 'Potion', 'n/a'),
-    ('Pote recarga área 11', '11', 'pote 560,426', 'Recarga', 'canSwim / canWaterRun1'),
-    ('Pote Vellum 04', '11', 'pote 1480,88', 'Vellum', 'canBreakeblocks'),
-    ('Skulla', '13', 'código BD:85AD', 'HP', 'n/a'),
-] + [(f'Pote 20G área 13 {c}', '13', f'pote {p}', '20G', 'canSwim / canWaterRun1')
+    ('Pote recarga área 11', '11', 'pote 560,426', 'Recarga', 'canHeadbutt, canSwim / canHeadbutt, canWaterRun1'),
+    ('Pote Vellum 04', '11', 'pote 1480,88', 'Vellum', 'canHeadbutt, canBreakeblocks'),
+    ('Skulla', '13', 'código BD:85AD', 'HP', 'canHeadbutt, 8+ HP'),
+] + [(f'Pote 20G área 13 {c}', '13', f'pote {p}', '20G', 'canHeadbutt, canSwim, 8+ HP / canHeadbutt, canWaterRun1, 8+ HP')
      for c, p in zip('abcde', ('472,216', '536,280', '632,328', '712,232', '808,264'))] + [
     ('Pote recarga área 14', '14', 'pote 1528,216', 'Recarga', 'n/a'),
     ('Flame Lord', '14', 'código 82:CCFD', 'Tornado', 'Claw / Buster / Demon Fire / Earth Crest / Water Crest / Air Crest / Time Crest'),
     ('Pote HP 0B', '15', 'pote 256,170', 'HP', 'canSwim / canWaterRun2'),
-    ('Skull', '16', 'objeto 208,170', 'Skull', 'Buster / Time Crest'),
+    ('Skull', '16', 'objeto 208,170', 'Skull', 'canHeadbutt, canBreakeblocks'),
     # Fase 4
     ('Potion 10', '18', 'objeto 536,408', 'Potion', 'canBreakeblocks'),
-    ('Pote 20G área 18', '18', 'pote 40,296', '20G', 'n/a'),
-    ('Pote recarga área 19', '19', 'pote 1656,120', 'Recarga', 'n/a'),
-    ('Flier 1', '19', 'código 85:DBA0', 'Claw', 'n/a'),
-    ('Hippogriff 2', '20', 'código 82:99A7', 'Recarga', 'n/a'),
-    ('Crown', '22', 'quebrável $A0 81:B501', 'Crown', 'n/a'),
-    ('Vellum 06', '23', 'objeto 440,264', 'Vellum', 'n/a'),
-    ('Arma 2', '23', 'não achado', 'Air Crest', 'n/a'),
+    ('Pote 20G área 18', '18', 'pote 40,296', '20G', 'canFly / 6+ HP'),
+    ('Pote recarga área 19', '19', 'pote 1656,120', 'Recarga', 'canFly'),
+    ('Flier 1', '19', 'código 85:DBA0', 'Claw', 'canFly'),
+    ('Hippogriff 2', '20', 'código 82:99A7', 'Recarga', 'canFly'),
+    ('Crown', '22', 'quebrável $A0 81:B501', 'Crown', 'canFly, canHeadbutt'),
+    ('Vellum 06', '23', 'objeto 440,264', 'Vellum', 'canFly'),
+    ('Arma 2', '23', 'não achado', 'Air Crest', 'canFly'),
     # Fase 5
     ('Pote HP 0D', '25', 'pote 56,472', 'HP', 'canSwim / canHeavyWaterRun'),
     ('Holothurion', '26', 'código 83:D7B7', 'HP', 'canSwim, 8+ HP'),
@@ -80,22 +85,28 @@ LOCATIONS = [
     ('Ossos Vellum 08', '30', 'quebrável $E0 B703 1480,168', 'Vellum', 'canBreakeSatue'),
     ('Pote recarga área 30', '30', 'pote 1144,408', 'Recarga', 'n/a'),
     ('Grewon', '30', 'código BE:9E23', 'Demon Fire', '10+hp'),
-    ('Pote HP 0F', '32', 'pote 456,184', 'HP', 'Air Crest / Tornado, Buster / Tornado, Demon Fire / Tornado, Eath Crest / '
-                                                   'Tornado, Time Crest / Tornado, Water Crest / Tornado + Vellum + Shock Spell'),
-    ('Flier 2', '34', 'código 85:DBA7', 'Recarga', 'canBreakeSatue, canVerticalClimb'),
-    ('Armor', '35', 'quebrável $E0 B733 680,392', 'Armor', 'canBreakeSatue, canVerticalClimb'),
-    ('Arma 3', '36', 'não achado', 'Time Crest', 'canBreakeSatue, canVerticalClimb'),
+    ('Pote HP 0F', '32', 'pote 456,184', 'HP', 'canHeadbutt, canVerticalClimb / canHeadbutt, Vellum / '
+                                                   'canHeadbutt, Claw'),
+    ('Flier 2', '34', 'código 85:DBA7', 'Recarga', 'canHeadbutt, canBreakeSatue, canVerticalClimb'),
+    ('Armor', '35', 'quebrável $E0 B733 680,392', 'Armor', 'canHeadbutt, canBreakeSatue, canVerticalClimb'),
+    ('Arma 3', '36', 'não achado', 'Time Crest', 'canHeadbutt, canBreakeSatue, canVerticalClimb'),
     # Phalanx (go mode)
-    ('Sino HP 10', '38', 'código BE:FA01 (pote 1257)', 'HP', 'canVerticalClimb / canSpikegrabe'),
-    ('Fang', '39', 'objeto 1960,440', 'Fang', 'canVerticalClimb / canSpikegrabe'),
+    ('Sino HP 10', '38', 'código BE:FA01 (pote 1257)', 'HP', 'canHeadbutt, canVerticalClimb / canHeadbutt, canSpikegrabe'),
+    # Fang pede cabeçada (Neitan, 08/10): o Hippogriff 3 (área 37, entrada do castelo) só acorda com ela, então a
+    # cabeçada nunca pode vir depois dele (sem ela, softlock). O Sino HP 10 já pedia.
+    ('Fang', '39', 'objeto 1960,440', 'Fang', 'canHeadbutt, canVerticalClimb / canHeadbutt, canSpikegrabe'),
 ]
 CASTLE = {'Sino HP 10', 'Fang'}
+AREA = {l[0]: l[1] for l in LOCATIONS}          # check -> área (stage(); Colocação Local)
+# Acessibilidade Vanilla (0.3.2): as fases 5 e 6 abrem depois destes chefes, como no jogo original (insanity_rom,
+# STAGE56_LOC: Earth + Buster + Tornado + Claw + Air = os drops originais deles)
+STAGE56_BOSSES = ('Arma 1', 'Ovnunu', 'Flame Lord', 'Flier 1', 'Arma 2')
 
 ITEM_ALIASES = {
     'buster': 'Buster', 'tornado': 'Tornado', 'claw': 'Claw', 'demon fire': 'Demon Fire',
     'earth crest': 'Earth Crest', 'eath crest': 'Earth Crest', 'air crest': 'Air Crest',
     'water crest': 'Water Crest', 'time crest': 'Time Crest', 'armor': 'Armor', 'vellum': 'Vellum',
-    'fire crest': 'Fire Crest',
+    'fire crest': 'Fire Crest', 'skull': 'Skull',
 }
 IGNORED = {'shock spell'}   # comprado na loja com vellum: basta o vellum (dinheiro não entra na lógica)
 PROGRESSION = {'Fire Crest', 'Buster', 'Tornado', 'Claw', 'Demon Fire', 'Earth Crest', 'Air Crest', 'Water Crest',
@@ -107,7 +118,7 @@ PROGRESSION = {'Fire Crest', 'Buster', 'Tornado', 'Claw', 'Demon Fire', 'Earth C
 # canFly/canHeadbutt sem Claw de propósito (Neitan: não conflitar com canVerticalClimb; a ROM deixa a Claw lutar com o
 # Hippogriff 1 — a lógica fica mais exigente que o jogo).
 CAN = {
-    'canfly': 'Fire Crest / Buster / Time Crest / Demon Fire',
+    'canfly': 'Fire Crest / Buster / Claw / Demon Fire / Tornado / Air Crest / Time Crest',   # V6 (asas)
     'canbreakesatue': 'Earth Crest',
     'canheadbutt': 'Fire Crest / Buster / Time Crest / Demon Fire / Tornado',
     'canswim': 'Water Crest',
@@ -123,12 +134,15 @@ CAN = {
 # piso das capacidades (Neitan, 02/10): canWaterRun1 desde a 1, canWaterRun2 a partir da 3, canHeavyWaterRun a partir
 # da 4. Sem entrada = vale em toda dificuldade
 CAN_FLOOR = {'canwaterrun2': 3, 'canheavywaterrun': 4}
+# Head Butt como item (Neitan, 04/10, V5: "haveSkull, só se estiver randomizado"): com a opção, a cabeçada só sai com
+# a Skull equipada, em qualquer forma (head_butt.py) -> canHeadbutt = só a Skull
+CAN_HB = dict(CAN, canheadbutt='Skull')
 
 
 DIFF_TAG = re.compile(r'\(\s*(\d)\s*(?:(a|e)\s*(\d)\s*)?\)')
 
 
-def parse(req):
+def parse(req, can=CAN):
     """Requisito -> lista de alternativas (termos, piso, principal): termos = ('item', nome) / ('hp', n) / ('beat', loc);
     piso = menor dificuldade em que a alternativa vale (1 sem parênteses); principal = dificuldades em que ela é o
     caminho principal (vazio = sem indicação)."""
@@ -149,7 +163,7 @@ def parse(req):
             t = t.strip()
             if not t or t in IGNORED:
                 continue
-            if t in CAN:
+            if t in can:
                 cans.append(t)
                 continue
             m = re.fullmatch(r'(\d+)\s*\+?\s*(?:ou mais de )?(?:de )?hp', t)
@@ -164,7 +178,7 @@ def parse(req):
         options = [(terms, low)]                  # cada capacidade multiplica as alternativas pelas dela
         for c in cans:
             options = [(have + sub, max(at, CAN_FLOOR.get(c, 1), sl)) for have, at in options
-                       for sub, sl, _ in parse(CAN[c])]
+                       for sub, sl, _ in parse(can[c], can)]
         alts += [(t, lo, main) for t, lo in options]
     return alts
 
@@ -172,6 +186,7 @@ def parse(req):
 # Dificuldade 1-5 (proposta do Neitan, 26/09): esferas, itens fortes, HP por esfera e HP removido.
 STRONG = {'Time Crest', 'Demon Fire', 'Fang', 'Armor', 'Air Crest'}
 MIN_SPHERES = 5
+SKULL_FLOOR = 3            # Head Butt como item: a Skull nunca nas esferas 1 e 2 (skull_min_sphere)
 HP_REMOVED = {4: 5}                          # cada HP removido vira 20G e Recarga, alternando
 # Dif. 5 (Neitan, 28/09; antes tirava 10 HP): sorteia de 2 a 4 destes pra sair da pool (viram 20G/Recarga).
 REMOVABLE = ('Air Crest', 'Time Crest', 'Tornado', 'Demon Fire')
@@ -192,8 +207,26 @@ SPHERE1_MAX = {1: {'chave': 3}, 2: {'chave': 2}, 3: {'chave': 2, 'HP': 5}, 4: {'
                5: {'chave': 1, 'HP': 3}}
 
 
-def sphere1_kind(item):
-    return 'HP' if item == 'HP' else 'chave' if item in PROGRESSION and item != 'Vellum' else None
+def sphere1_kind(item, prog=PROGRESSION):
+    return 'HP' if item == 'HP' else 'chave' if item in prog and item != 'Vellum' else None
+
+
+# Progressão estilo Map Rando (Neitan, 03/10; guia Avançado). Os padrões (uniform / neutral / sem prioridade / sem
+# filler no início) são o preenchimento de sempre: a guia Simples não muda. As regras da dificuldade (itens fortes, teto
+# da 1ª esfera, castelo) continuam valendo por cima disto.
+# Ritmo: peso dos itens de progressão sorteados como enchimento (fora das chaves que abrem a próxima esfera) e, nas
+# chaves, preferência pelas que abrem menos (lento) ou mais (rápido) checks (pick_keys).
+# Lento (Neitan, 04/10): "seeds lentas requerem mais backtracking, mais itens pra desbloquear os objetivos, mas não
+# significa tudo sempre nas últimas esferas" -> a lentidão vem da chave que abre menos (pick_keys / n²); os outros
+# itens de progressão só um pouco mais segurados que no Uniforme (era 0.05: empilhava tudo no fim e travava o
+# castelo com os 5 Vellums juntos, com o Head Butt)
+PACE_PROG = {'slow': 0.15, 'uniform': 0.3, 'fast': 1.5}
+# Prioridade por item: Cedo multiplica o peso do item, Tarde divide (Moderada x4, Forte x20)
+PRIO_ITEMS = ('Fire Crest', 'Buster', 'Tornado', 'Claw', 'Demon Fire', 'Earth Crest', 'Air Crest', 'Water Crest',
+              'Time Crest', 'Crown', 'Skull', 'Armor', 'Fang', 'Hand')
+PRIO_MULT = {'moderate': 4, 'strong': 20}
+# Filler no início: uma unidade de cada item marcado vai pra 1ª esfera (respeitando o teto de HP da dificuldade)
+EARLY_ITEMS = ('HP', 'Potion', 'Vellum', 'Crown', 'Skull', 'Hand', 'Recarga', '20G')
 
 # Go Mode (Neitan, 27/09): o jogador escolhe o que libera o castelo do Phalanx (antes era por dificuldade).
 # Item exigido pelo Go Mode nunca vai pro castelo (não dá pra precisar dele pra entrar onde ele está).
@@ -252,11 +285,22 @@ def castle_fixed(diff, go, removed=(), mode='extra'):
                  and (cats is None or it in cats))
 
 
-def accept(diff, p, got, sph, mode='extra', go='vellum', removed=(), min_spheres=MIN_SPHERES):
+def skull_min_sphere(n):
+    """Head Butt como item (Neitan, 04/10: "skull nunca nas esferas inferiores, sempre nas médias pras altas"): a Skull
+    cai na metade de cima das esferas — esfera >= metade do total (pra cima), e nunca antes da 3ª."""
+    return max(SKULL_FLOOR, -(-n // 2))
+
+
+def accept(diff, p, got, sph, mode='extra', go='vellum', removed=(), min_spheres=MIN_SPHERES, headbutt=False):
     """Regras que a seed pronta tem que cumprir. min_spheres: 5 na guia Simples; 4 no Avançado (Neitan, 02/10: com
-    pool pequena o jogo fica quase todo no lugar original, que tem 4 esferas; menos que 4 nunca)."""
+    pool pequena o jogo fica quase todo no lugar original, que tem 4 esferas; menos que 4 nunca). headbutt: a Skull
+    (item-chave) na metade de cima das esferas (skull_min_sphere)."""
     if len(got) != len(LOCATIONS) or any(p[l] in bad for l, bad in FORBIDDEN.items()):
         return False
+    if headbutt and diff is not None:
+        at = [i for i, sp in enumerate(sph, 1) for l in sp if p[l] == 'Skull' and l in shuffled(mode)]
+        if at and at[0] < skull_min_sphere(len(sph)):
+            return False
     if any(p[l] in GO_ITEMS[go] for l in CASTLE if l in shuffled(mode)):
         return False
     if diff is None:
@@ -330,7 +374,7 @@ def pick_removed(rng, diff, go, keep=None, span='dif'):
 
 class Logic:
     def __init__(self, diff=None, mode='extra', go='vellum', antisoftlock=False, startcrest=False, skipsomulo=False,
-                 level=None, hp_removed=None, remove_span='dif'):
+                 level=None, hp_removed=None, remove_span='dif', access='all', headbutt=False):
         """diff = dificuldade 1-5 (na guia Avançado: o bucket da Densidade, que decide onde caem os itens fortes, HP por
         esfera, 1ª esfera e as regras de aceite). level = piso da lógica (None = diff; Avançado: "Nível da lógica").
         mode = chave de MODES ou conjunto de itens (pool_mode). startcrest = False, True (sorteada) ou o nome da
@@ -343,6 +387,7 @@ class Logic:
         # só Crests + HP); na guia Simples ele é duro (o preenchimento recomeça), como sempre foi
         self.soft_cap = False
         self.min_spheres = MIN_SPHERES     # Avançado: 4 (accept)
+        self.access = access               # 'all' (6 fases abertas) ou 'vanilla' (5 e 6 depois de STAGE56_BOSSES)
         cats = MODES[mode] if isinstance(mode, str) else mode
         if cats is not None and not CRESTS <= cats and (startcrest or remove_span not in ('dif', ())):
             raise ValueError('crest inicial e remoção de itens precisam das Crests na pool')
@@ -355,19 +400,41 @@ class Logic:
         self.need = {'Vellum': VELLUMS_FOR_CASTLE}   # Go Mode por item: quantos de cada (set_need)
         self.locs = [l[0] for l in LOCATIONS]
         # V3: só as alternativas cujo piso de dificuldade <= a dificuldade da seed (sem dificuldade: todas)
-        self.alts = {l[0]: parse(l[4]) for l in LOCATIONS}
+        # Head Butt como item (head_butt.py): canHeadbutt = Skull, que vira item de progressão (prog)
+        self.headbutt = headbutt
+        self.prog = PROGRESSION | ({'Skull'} if headbutt else set())
+        self.alts = {l[0]: parse(l[4], CAN_HB if headbutt else CAN) for l in LOCATIONS}
         self.req = {loc: [terms for terms, low, _ in alts if self.level is None or low <= self.level]
                     for loc, alts in self.alts.items()}
+        self.req_low = {loc: [low for _, low, _ in alts if self.level is None or low <= self.level]   # piso de
+                        for loc, alts in self.alts.items()}                                       # cada um do req
+        # progressão (guia Avançado, PACE_PROG etc.): ritmo, colocação ('neutral' / 'forced' / 'local'), prioridade
+        # {item: 'early'/'late'} com a intensidade, e os itens do Filler no início
+        self.pace, self.placement = 'uniform', 'neutral'
+        self.priority, self.prio_strength = {}, 'moderate'
+        self.early = ()
         lower = {n.lower(): n for n in self.locs}
         for alts in self.req.values():
             for terms in alts:
                 for i, (k, v) in enumerate(terms):
                     if k == 'beat':
                         terms[i] = (k, next(n for low, n in lower.items() if low.startswith(v)))
+        if access == 'vanilla':                   # todo check das fases 5 e 6 pede os 5 chefes (castelo: castle_ok)
+            gate = [('beat', b) for b in STAGE56_BOSSES]
+            for loc, area in ((l[0], l[1]) for l in LOCATIONS):
+                if stage(area) in ('Stage 5', 'Stage 6'):
+                    self.req[loc] = [terms + gate for terms in self.req[loc]]
 
-    def reachable(self, have):
-        """Conjunto de checks alcançáveis com o inventário `have` (Counter), resolvendo 'beat' por ponto fixo."""
+    def reachable(self, have, beaten=None):
+        """Conjunto de checks alcançáveis com o inventário `have` (Counter). beaten = checks de esferas ANTERIORES: um
+        'vencer X' só vale se X já foi feito numa esfera anterior (Neitan, 04/10: esfera = camada de acessibilidade;
+        antes, o chefe vencido na mesma esfera já liberava o que dependia dele — com a Acessibilidade Vanilla a Fase 5
+        aparecia na esfera 1). beaten=None = o jeito antigo, ponto fixo (só o preenchimento sem dificuldade, fill)."""
         hp = START_HP + have['HP']
+        if beaten is not None:
+            return {loc for loc in self.locs
+                    if not (loc in CASTLE and not self.castle_ok(have, beaten))
+                    and any(all(self.term_ok(t, have, hp, beaten) for t in terms) for terms in self.req[loc])}
         done = set()
         changed = True
         while changed:
@@ -388,7 +455,9 @@ class Logic:
         self.need = {k: (VELLUMS_FOR_CASTLE if k == 'Vellum' else c[k]) for k in GO_ITEMS[self.go]}
 
     def castle_ok(self, have, done):
-        """Go mode: quando o castelo do Phalanx aparece."""
+        """Go mode: quando o castelo do Phalanx aparece (Acessibilidade Vanilla: só junto com as fases 5 e 6)."""
+        if self.access == 'vanilla' and not all(b in done for b in STAGE56_BOSSES):
+            return False
         if self.go == 'bosses':
             return all(b in done for b in BOSSES)
         return all(have[k] >= n for k, n in self.need.items())
@@ -398,6 +467,14 @@ class Logic:
         if k == 'item':
             return have[v] > 0 or (self.claw and v in CLAW_SUB and have['Claw'] > 0)
         return hp >= v if k == 'hp' else v in done
+
+    def path_cost(self, loc, have, done):
+        """(piso, nº de exigências) do caminho mais fácil que já abre o check. Colocação Forçada (Neitan, 03/10): o
+        item-chave vai pro check de piso mais alto e, no empate, pro que pede mais coisas (itens, HP, chefes)."""
+        hp = START_HP + have['HP']
+        ok = [(low, len(terms)) for terms, low in zip(self.req[loc], self.req_low[loc])
+              if all(self.term_ok(t, have, hp, done) for t in terms)]
+        return min(ok, default=(0, 0))
 
     def set_start(self, rng):
         if isinstance(self.startcrest, str):                 # Avançado: crest escolhida
@@ -425,7 +502,7 @@ class Logic:
         self.set_need(it for loc, it in placement.items() if loc not in CASTLE)
         have, got, spheres = self.base_have(), set(), []
         while True:
-            new = self.reachable(have) - got
+            new = self.reachable(have, got) - got
             if not new:
                 return got, spheres
             spheres.append(sorted(new))
@@ -434,8 +511,9 @@ class Logic:
                 have[placement[loc]] += 1
 
 
-def generate(seed, logic, tries=50):
-    """Mesma seed = mesmo resultado. Se o preenchimento cair num beco, tenta de novo com o mesmo gerador."""
+def generate(seed, logic, tries=50, ok=None):
+    """Mesma seed = mesmo resultado. Se o preenchimento cair num beco, tenta de novo com o mesmo gerador.
+    ok(p) = conferência extra (build_seed: todo item com gráfico próprio); recusou -> tenta de novo."""
     rng = random.Random(seed)
     logic.set_start(random.Random(seed ^ 0x57A7))   # crest inicial: 1 sorteio por seed, igual pra todas (não por
     if logic.diff is not None:                      # tentativa: senão só sobram as que passam fácil nas regras)
@@ -443,14 +521,14 @@ def generate(seed, logic, tries=50):
     for _ in range(tries):
         if logic.diff is None:
             p = fill(rng, logic)
-            if p is not None:
+            if p is not None and (ok is None or ok(p)):
                 return p
             continue
         p = fill_spheres(rng, logic)
         if p is None:
             continue
         got, sph = logic.sweep(p)
-        if accept(logic.diff, p, got, sph, logic.mode, logic.go, logic.excluded(), logic.min_spheres):
+        if accept(logic.diff, p, got, sph, logic.mode, logic.go, logic.excluded(), logic.min_spheres, logic.headbutt)                 and (ok is None or ok(p)):
             return p
     return None
 
@@ -473,18 +551,28 @@ def fill_spheres(rng, logic):
     logic.set_need(pool + [it for loc, it in fixed.items() if loc not in CASTLE])
     rng.shuffle(pool)
     gi = GO_ITEMS[go]
-    prog = PROGRESSION
+    prog = logic.prog
     target = strong_targets(rng, diff, removed)
     placement, have, s = {}, logic.base_have(), 0          # a crest inicial já está no inventário
+    prog_w = PACE_PROG[logic.pace]
+    mult = PRIO_MULT[logic.prio_strength]
+    prio = {it: mult if p == 'early' else 1 / mult for it, p in logic.priority.items() if p in ('early', 'late')}
+    last_stage = None                                      # Colocação Local: fase do último item-chave
+    logic.key_log = []                                     # (esfera, check) de cada item-chave (testes)
 
     def w(item, sph, key=False):
+        return base_w(item, sph, key) * prio.get(item, 1)
+
+    def base_w(item, sph, key):
+        if logic.headbutt and item == 'Skull':          # item-chave: não sai antes da 3ª esfera (skull_min_sphere)
+            return 0 if sph < SKULL_FLOOR else 1
         if item in target:                             # atrasado em relação ao alvo: entra assim que puder
             return 50 if sph >= target[item] else 0
         if item in STRONG:
             return strong_weight(diff, sph)
         if item == 'HP':
             return hp_weight(diff, sph)
-        return 1 if key or item not in prog else 0.3   # progressão fora das chaves: pouca, pra não achatar
+        return 1 if key or item not in prog else prog_w   # progressão fora das chaves: pouca (0.3), pra não achatar
 
     def draw(sph, allowed):
         cand = [it for it in pool if allowed(it)]
@@ -496,7 +584,8 @@ def fill_spheres(rng, logic):
         return it
 
     while len(placement) < len(LOCATIONS):
-        reach = logic.reachable(have)
+        before = set(placement)                                  # esferas anteriores (chefes vencidos)
+        reach = logic.reachable(have, before)
         slots = [l for l in logic.locs if l in reach and l not in placement]
         if not slots:
             return None
@@ -513,22 +602,25 @@ def fill_spheres(rng, logic):
         keys = []
         left = [l for l in logic.locs if l not in placement and l not in sphere]
         if left:
-            reach2 = logic.reachable(have)                        # os fixos desta esfera já podem abrir algo
+            nxt = before | sphere                                 # a próxima esfera já conta os chefes desta
+            reach2 = logic.reachable(have, nxt)                   # os fixos desta esfera já podem abrir algo
             if not any(l in reach2 and l not in sphere for l in left):
-                keys = pick_keys(rng, logic, pool, prog, have, reach2, len(others), lambda it: w(it, s, True))
-                if keys is None:
-                    return None
+                keys = pick_keys(rng, logic, pool, prog, have, reach2, len(others), lambda it: w(it, s, True),
+                                 logic.pace, nxt)
+                if keys is None:          # nenhum item-chave sozinho abre algo (ex.: o castelo pede os Vellums que
+                    keys = []             # sobraram): enche a rodada normalmente; a vaga do objetivo (must_goal) põe
+                                          # o que falta. Se nem assim abrir nada, a próxima rodada vem vazia e falha
         for it in keys:
             pool.remove(it)
         cap = dict(SPHERE1_MAX.get(diff, {})) if s == 1 else {}   # 1ª esfera: quanto ainda cabe de cada tipo
         for it in keys:
-            if sphere1_kind(it) in cap:
-                cap[sphere1_kind(it)] -= 1
-        fits = lambda x: cap.get(sphere1_kind(x), 1) > 0
+            if sphere1_kind(it, prog) in cap:
+                cap[sphere1_kind(it, prog)] -= 1
+        fits = lambda x: cap.get(sphere1_kind(x, prog), 1) > 0
 
         def take(it):
-            if sphere1_kind(it) in cap:
-                cap[sphere1_kind(it)] -= 1
+            if sphere1_kind(it, prog) in cap:
+                cap[sphere1_kind(it, prog)] -= 1
             return it
         got = {}
         def draw_cap(cond):
@@ -542,11 +634,33 @@ def fill_spheres(rng, logic):
                 return None
             got[loc] = take(it)
         rest = [l for l in others]
+        if keys and logic.placement == 'forced':                  # chaves nos checks mais "caros" (path_cost);
+            rest.sort(key=lambda l: logic.path_cost(l, have, reach), reverse=True)   # empate: a ordem sorteada
+        elif keys and logic.placement == 'local' and last_stage is not None:   # chaves na fase da chave anterior
+            rest.sort(key=lambda l: abs(STAGE_NO[stage(AREA[l])] - last_stage))  # ou na mais perto
         for loc, it in zip(rest, keys):
             got[loc] = it
-        for loc in rest[len(keys):]:
+        if keys:
+            last_stage = STAGE_NO[stage(AREA[rest[len(keys) - 1]])]
+            logic.key_log += [(s, l) for l in rest[:len(keys)]]
+        if s == 1:                                                # filler no início: 1 de cada item marcado
+            # com o Head Butt como item a Skull é item-chave: nunca entra como filler (Neitan, 04/10)
+            early = [x for x in logic.early if not (logic.headbutt and x == 'Skull')]
+            for it in (x for x in EARLY_ITEMS if x in early and x in pool and fits(x)):
+                spare = sum(1 for x in pool if x not in gi) - castle_later
+                loc = next((l for l in rest[len(keys):] if l not in got and it not in FORBIDDEN.get(l, ())), None)
+                if loc is not None and (it in gi or spare > 0):
+                    pool.remove(it)
+                    got[loc] = take(it)
+        for loc in [l for l in rest[len(keys):] if l not in got]:
             spare = sum(1 for x in pool if x not in gi) - castle_later   # reserva pras vagas do castelo
-            it = draw_cap(lambda x: (x in gi or spare > 0) and x not in FORBIDDEN.get(loc, ()))
+            # vagas do objetivo (04/10): o item do objetivo nunca vai pro castelo, então se o que sobra dele na pool já
+            # ocupa todos os checks livres fora do castelo, este check recebe um (senão o castelo nunca abriria: travava
+            # com os Vellums sobrando no fim). Só age nesse aperto final; não puxa o objetivo pro começo
+            free_out = sum(1 for l in logic.locs if l not in CASTLE and l not in fixed and l not in placement
+                           and l not in got)
+            must_goal = bool(gi) and sum(1 for x in pool if x in gi) >= free_out
+            it = draw_cap(lambda x: (x in gi if must_goal else (x in gi or spare > 0)) and x not in FORBIDDEN.get(loc, ()))
             if it is None:
                 return None
             got[loc] = take(it)
@@ -555,12 +669,12 @@ def fill_spheres(rng, logic):
             have[it] += 1
     return placement
 
-def pick_keys(rng, logic, pool, prog, have, reach, room, weight):
+def pick_keys(rng, logic, pool, prog, have, reach, room, weight, pace='uniform', beaten=None):
     """Itens (do pool) que, somados ao inventário, abrem pelo menos um check novo. Tenta 1 item, depois N HPs,
-    depois pares. Peso = preferência da dificuldade / nº de checks abertos."""
+    depois pares. Peso = preferência da dificuldade / nº de checks abertos (Ritmo lento: / nº², rápido: x nº)."""
     def gain(items):
         h = have + Counter(items)
-        return len(logic.reachable(h) - reach)
+        return len(logic.reachable(h, beaten) - reach)
 
     if room < 1:
         return None
@@ -584,14 +698,19 @@ def pick_keys(rng, logic, pool, prog, have, reach, room, weight):
                     opts.append(([a, b], gain([a, b])))
     if not opts:
         return None
-    ws = [max(min(weight(it) for it in items), 0.001) / g for items, g in opts]
+    if pace == 'fast':
+        ws = [max(min(weight(it) for it in items), 0.001) * g for items, g in opts]
+    elif pace == 'slow':
+        ws = [max(min(weight(it) for it in items), 0.001) / g ** 2 for items, g in opts]
+    else:
+        ws = [max(min(weight(it) for it in items), 0.001) / g for items, g in opts]
     return list(rng.choices(opts, ws)[0][0])
 
 
 def fill(rng, logic):
     pool = [l[3] for l in LOCATIONS]
-    prog = [i for i in pool if i in PROGRESSION]
-    rest = [i for i in pool if i not in PROGRESSION]
+    prog = [i for i in pool if i in logic.prog]
+    rest = [i for i in pool if i not in logic.prog]
     rng.shuffle(prog)
     placement, empty = {}, list(logic.locs)
     # assumed fill: cada item de progressão vai para um check alcançável com os que ainda faltam colocar
@@ -624,10 +743,12 @@ def main():
     ap.add_argument('-a', '--antisoftlock', action='store_true', help='patches anti-softlock (DCOR/patch)')
     ap.add_argument('-c', '--startcrest', action='store_true', help='crest inicial sorteada + Fire Crest como item')
     ap.add_argument('-k', '--skipsomulo', action='store_true', help='começa na área 1 com o item do Somulo')
+    ap.add_argument('-b', '--headbutt', action='store_true', help='Head Butt como item: cabeçada só com a Skull '
+                    'equipada (gárgulas com Cima + A)')
     a = ap.parse_args()
     if a.dif is None and (a.modo != 'extra' or a.go != 'vellum'):
         ap.error('o preenchimento antigo só existe no modo extra com go vellum: passe -d')
-    logic = Logic(a.dif, a.modo, a.go, a.antisoftlock, a.startcrest, a.skipsomulo)
+    logic = Logic(a.dif, a.modo, a.go, a.antisoftlock, a.startcrest, a.skipsomulo, headbutt=a.headbutt)
     pool = Counter(pool_for(a.dif, a.modo)[0])
     print(f'{len(LOCATIONS)} checks; pool: ' + ', '.join(f'{k}×{v}' for k, v in sorted(pool.items())))
     if a.lote:
@@ -681,7 +802,10 @@ def main():
 
 
 # Spoiler em inglês (padrão do Neitan, 29/09): os nomes internos (PT) só mudam na saída.
-SPOILER_EN = (('Somulo (cabeça)', 'Somulo (head)'), ('pós-Flame Lord', 'after Flame Lord'), ('Estátua', 'Statue'),
+# 0.3.1 (Neitan): sem o número interno do item no nome (HP 0A, Vellum 00, Potion 0C...); as duas estátuas de HP da
+# Fase 5 ficariam iguais, viram a/b como os potes
+SPOILER_EN = (('Estátua HP 0E', 'Statue HP a'), ('Estátua HP 05', 'Statue HP b'),
+              ('Somulo (cabeça)', 'Somulo (head)'), ('pós-Flame Lord', 'after Flame Lord'), ('Estátua', 'Statue'),
               ('Ossos', 'Bones'), ('Pote recarga', 'Refill pot'), ('Pote', 'Pot'), ('Sino', 'Bell'), ('chão', 'floor'),
               ('fase', 'stage'), ('área', 'area'), ('Recarga', 'Refill'))
 
@@ -689,7 +813,7 @@ SPOILER_EN = (('Somulo (cabeça)', 'Somulo (head)'), ('pós-Flame Lord', 'after 
 def en(name):
     for a, b in SPOILER_EN:
         name = name.replace(a, b)
-    return name
+    return re.sub(r'\b(HP|Vellum|Potion) [0-9A-F]{2}\b', r'\1', name)
 
 
 # Fase de cada área (spoiler, Neitan 03/10: quem só joga não conhece o número das áreas). Fases como na lógica V4;
@@ -697,6 +821,9 @@ def en(name):
 STAGE_AREAS = {'Stage 1': (0, 1, 2, 3, 17), 'Stage 2': range(4, 10), 'Stage 3': (*range(10, 17), 50, 51),
                'Stage 4': range(18, 24), 'Stage 5': range(24, 29), 'Stage 6': range(29, 37), 'Castle': (37, 38, 39),
                'Minigame': (52, 53, 54)}
+
+
+STAGE_NO = {**{f'Stage {n}': n for n in range(1, 7)}, 'Castle': 7, 'Minigame': 10}   # distância (Colocação Local)
 
 
 def stage(area):
@@ -709,7 +836,17 @@ def build_seed(seed, van=None, logic=None):
     """Gera a seed. van = bytes da ROM original (None = só spoiler). Devolve (rom, linhas do spoiler, relatório de
     gráficos) ou None se o preenchimento falhar. Usado pela linha de comando e pela UI (dcor_gui.py)."""
     logic = logic or Logic()
-    p = generate(seed, logic)
+    ok = None
+    if van is not None:
+        import insanity_gfx
+        import insanity_rom
+        import rom_tables
+        vrom = rom_tables.Rom(van)
+        # 08/10: item sem gráfico próprio aparece com o desenho errado (área 13 com 3 crests + Vellum nos potes):
+        # refaz o preenchimento. Os mesmos ids que insanity_rom.write vai sortear (mesmo rng).
+        ok = lambda p: not insanity_gfx.missing(vrom, insanity_rom.concrete(p, random.Random(seed ^ 0x5EED)),
+                                                logic.skipsomulo)
+    p = generate(seed, logic, ok=ok)
     if p is None:
         return None
     got, sph = logic.sweep(p)
@@ -720,14 +857,15 @@ def build_seed(seed, van=None, logic=None):
              'out of the pool: ' + (', '.join(logic.removed) or 'none') + ' | map patches: ' +
              (', '.join(str(x) for x in logic.patches()) or 'none') +
              (' (Claw counts as Air/Tornado)' if logic.claw else '') +
-             (' | Skip Somulo: starts in Stage 1 with the Somulo item' if logic.skipsomulo else ''), '']
+             (' | Skip Somulo: starts in Stage 1 with the Somulo item' if logic.skipsomulo else '') +
+             (' | stages 5-6 open after ' + ', '.join(STAGE56_BOSSES) if logic.access == 'vanilla' else ''), '']
     area = {l[0]: l[1] for l in LOCATIONS}
     data = ids = None
     gfx = []
     if van is not None:
         import insanity_rom
         data, ids = insanity_rom.write(van, p, random.Random(seed ^ 0x5EED), logic.go, logic.patches(), logic.start,
-                                       logic.skipsomulo)
+                                       logic.skipsomulo, logic.access == 'vanilla', logic.headbutt)
         gfx = list(insanity_rom.write.gfx_report)
     free = set(shuffled(logic.mode))
     for i, s in enumerate(sph, 1):

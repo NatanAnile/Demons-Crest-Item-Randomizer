@@ -1,4 +1,4 @@
-DEMON'S CREST OPEN RANDOMIZER (DCOR) - versão 0.3.1
+DEMON'S CREST OPEN RANDOMIZER (DCOR) - versão 0.3.2
 ==================================================
 
 (English version below.)
@@ -93,8 +93,8 @@ EXTRAS
   A dificuldade 5 liga esta opção sozinha. Dá pra desligar, com um aviso: a seed pode ficar impossível.
 - Skip Somulo: pula a luta do Somulo na abertura. O jogo começa na área 1, com o Somulo já vencido, e o item
   que ele soltaria aparece em cima do Firebrand.
-- Randomizar Crest inicial: em breve. O Firebrand começa com uma crest sorteada e o tiro básico vira o item Fire
-  Crest.
+- Randomizar Crest inicial: o Firebrand começa com uma crest sorteada entre Fire Crest (o início original), Claw,
+  Earth e Buster. Fora da Fire Crest, o tiro Fire vira o item Fire Crest; com a Earth ele já começa transformado.
 - Randomizar Head Butt: em breve. A cabeçada vira item; sem ela não se quebram estátuas nem janelas.
 
 
@@ -102,17 +102,23 @@ GUIA AVANÇADO
 -------------
 Cada parte da seed separada. "Rando" = sorteado pela seed (o mesmo nome dá o mesmo resultado); o cabeçalho do
 spoiler diz o que saiu.
-- Preset: carrega as opções de um arquivo .json (botão Carregar).
+- Preset: carrega as opções de um arquivo .json (botão da pasta) ou salva as opções marcadas num .json (botão do
+  disquete; o nome do arquivo vira o nome do preset).
 - Dificuldade: 1 a 5 marca tudo abaixo como na guia Simples; mexer em qualquer opção vira Custom.
 - Nível da lógica: até onde a lógica pode exigir truques, como correr debaixo d'água sem a Water Crest (1 a 5).
-- Acessibilidade: All Stages (as 6 fases abertas). Vanilla: em breve.
+- Acessibilidade: All Stages (as 6 fases abertas) ou Vanilla (começa com as fases 1 a 4; as fases 5 e 6 e o
+  castelo abrem depois de vencer Arma 1, Ovnunu, Flame Lord, Flier 1 e Arma 2, como no jogo original).
 - Pool de Itens: o que entra no sorteio (Crests, Vellum, Potion, Talismã, HP, Refil HP, Moedas 20G); o que ficar
   desmarcado fica no lugar original. Rando sorteia de 1 a 7 categorias.
 - Densidade: 0 a 100, onde caem os itens fortes e o HP (mais alto = mais tarde e mais difícil).
 - Remoção de itens: Nenhuma, 2, 3, 4 ou Rando (2 a 4) entre Air Crest, Time Crest, Tornado e Demon Fire.
 - HP disponível: Sparse (6 a 10), Medium (11 a 15), Full (16) ou Rando. Os HP que saem viram 20G ou Refil HP.
 - Objetivo, Starter Crest (Vanilla, Earth, Buster, Claw, Rando), Skip Somulo e Anti-Softlock.
-- Randomizar Head Butt: em breve.
+- Randomizar Head Butt: a cabeçada só sai com o talismã Skull equipado (as gárgulas usam Cima + A); a
+  Skull vira item de progressão. No Avançado: Não, Sim ou Rando.
+- Progressão (como os itens se espalham pelas esferas; inspirada no Map Rando de Super Metroid): Ritmo (Lento,
+  Uniforme, Rápido), Colocação do item-chave (Neutra, Forçada, Local), Prioridade por item (Padrão, Cedo, Tarde;
+  Intensidade Moderada ou Forte) e Filler no início (uma unidade dos itens marcados garantida no começo).
 Travas: sem as Crests na pool não dá pra ter crest inicial, remoção nem os objetivos All Bosses e All 4 Main
 Crests; com remoção de itens não dá o objetivo All 4 Main Crests; remoção de 4 exige o Anti-Softlock.
 No Avançado a seed tem no mínimo 4 esferas (com pool pequena o jogo fica perto do original, que tem 4).
@@ -121,6 +127,9 @@ No Avançado a seed tem no mínimo 4 esferas (com pool pequena o jogo fica perto
 OUTROS AJUSTES QUE O DCOR FAZ NA ROM
 ------------------------------------
 - Cada item aparece com o próprio gráfico e a própria paleta, esteja onde estiver.
+- Select dentro da fase: tira metade do HP atual a cada aperto; com 1 de HP, o próximo aperto mata o Firebrand e
+  aparece a tela de morte (Retry, Select a Stage, End). Serve pra sair de um lugar onde ficou preso. Só no chão,
+  pulando, planando ou nadando, e não durante a piscada depois de um dano.
 - Pegar uma crest devolve o controle assim que a caixa de mensagem fecha (no original podia prender o Firebrand).
 - Somulo, primeira luta: a cabeça morre com 3 tiros (eram 6).
 - A caixa de mensagem não estraga mais o efeito da água.
@@ -165,7 +174,7 @@ Demon's Crest é da Capcom. Este é um projeto de fã, sem fins lucrativos, e n�
 
 
 ==================================================
-DEMON'S CREST OPEN RANDOMIZER (DCOR) - version 0.3.1
+DEMON'S CREST OPEN RANDOMIZER (DCOR) - version 0.3.2
 ==================================================
 
 
@@ -260,8 +269,8 @@ EXTRAS
   Difficulty 5 turns this option on by itself. You can turn it off, with a warning: the seed may become impossible.
 - Skip Somulo: skips the opening Somulo fight. The game starts in area 1 with Somulo already beaten, and the item
   he would drop appears on top of Firebrand.
-- Randomize starting Crest: coming soon. Firebrand starts with a random crest and the basic shot becomes the Fire
-  Crest item.
+- Randomize starting Crest: Firebrand starts with a crest rolled among Fire Crest (the original start), Claw,
+  Earth and Buster. Other than Fire Crest, the Fire shot becomes the Fire Crest item; with Earth he starts transformed.
 - Randomize Head Butt: coming soon. The head butt becomes an item; without it you cannot break statues or windows.
 
 
@@ -269,17 +278,23 @@ ADVANCED TAB
 ------------
 Each part of the seed on its own. "Rando" = rolled from the seed (the same name gives the same result); the spoiler
 header tells what came out.
-- Preset: loads the options from a .json file (Load button).
+- Preset: loads the options from a .json file (folder button) or saves the selected options to a .json (disk
+  button; the file name becomes the preset name).
 - Difficulty: 1 to 5 sets everything below like the Simple tab; changing any option makes it Custom.
 - Logic level: how far the logic may require tricks, like running underwater without the Water Crest (1 to 5).
-- Accessibility: All Stages (all 6 stages open). Vanilla: coming soon.
+- Accessibility: All Stages (all 6 stages open) or Vanilla (starts with stages 1 to 4; stages 5 and 6 and the
+  castle open after beating Arma 1, Ovnunu, Flame Lord, Flier 1 and Arma 2, like the original game).
 - Item Pool: what gets shuffled (Crests, Vellum, Potion, Talisman, HP, HP Refill, 20G Coins); anything unchecked
   stays in its original place. Rando picks 1 to 7 categories.
 - Density: 0 to 100, where strong items and HP land (higher = later and harder).
 - Item removal: None, 2, 3, 4 or Rando (2 to 4) among Air Crest, Time Crest, Tornado and Demon Fire.
 - Available HP: Sparse (6 to 10), Medium (11 to 15), Full (16) or Rando. Removed HP become 20G or HP Refill.
 - Goal, Starter Crest (Vanilla, Earth, Buster, Claw, Rando), Skip Somulo and Anti-Softlock.
-- Randomize Head Butt: coming soon.
+- Randomize Head Butt: the head butt only works with the Skull talisman equipped (the gargoyles use Up
+  + A); the Skull becomes a progression item. On the Advanced tab: No, Yes or Rando.
+- Progression (how items spread over the spheres; inspired by the Super Metroid Map Rando): Pace (Slow, Uniform,
+  Fast), key item Placement (Neutral, Forced, Local), Item priority (Default, Early, Late; Moderate or Strong
+  strength) and Early filler items (one copy of the checked items guaranteed at the start).
 Locks: without Crests in the pool there is no starting crest, no removal and no All Bosses / All 4 Main Crests goal;
 item removal blocks the All 4 Main Crests goal; removing 4 requires Anti-Softlock.
 On the Advanced tab a seed has at least 4 spheres (with a small pool the game stays close to the original, which has 4).
@@ -288,6 +303,9 @@ On the Advanced tab a seed has at least 4 spheres (with a small pool the game st
 OTHER CHANGES DCOR MAKES TO THE ROM
 -----------------------------------
 - Every item shows up with its own graphics and its own palette, wherever it is.
+- Select inside a stage: each press takes half of the current HP; at 1 HP, the next press kills Firebrand and the
+  death screen shows up (Retry, Select a Stage, End). Use it to get out of a place where you got stuck. Only on the
+  ground, jumping, hovering or swimming, and not during the blinking after a hit.
 - Picking up a crest gives control back as soon as the message box closes (in the original it could lock
   Firebrand in place).
 - Somulo, first fight: the head dies in 3 shots (it used to take 6).
