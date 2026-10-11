@@ -402,6 +402,7 @@ class Logic:
         # V3: só as alternativas cujo piso de dificuldade <= a dificuldade da seed (sem dificuldade: todas)
         # Head Butt como item (head_butt.py): canHeadbutt = Skull, que vira item de progressão (prog)
         self.headbutt = headbutt
+        self.quickswap = True          # troca de crest com L/R (0.3.3); não mexe no preenchimento
         self.prog = PROGRESSION | ({'Skull'} if headbutt else set())
         self.alts = {l[0]: parse(l[4], CAN_HB if headbutt else CAN) for l in LOCATIONS}
         self.req = {loc: [terms for terms, low, _ in alts if self.level is None or low <= self.level]
@@ -865,7 +866,8 @@ def build_seed(seed, van=None, logic=None):
     if van is not None:
         import insanity_rom
         data, ids = insanity_rom.write(van, p, random.Random(seed ^ 0x5EED), logic.go, logic.patches(), logic.start,
-                                       logic.skipsomulo, logic.access == 'vanilla', logic.headbutt)
+                                       logic.skipsomulo, logic.access == 'vanilla', logic.headbutt,
+                                       logic.quickswap)
         gfx = list(insanity_rom.write.gfx_report)
     free = set(shuffled(logic.mode))
     for i, s in enumerate(sph, 1):

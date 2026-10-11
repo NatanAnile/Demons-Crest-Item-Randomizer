@@ -41,7 +41,7 @@ import tkinter.font as tkfont
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import insanity_rando as R  # noqa: E402
 
-VERSION = '0.3.2'
+VERSION = '0.3.4'
 VANILLA_SHA1 = '743d60ee1536b0c7c24dbb8ba39d14ed5937c0d5'   # Demon's Crest (USA), sem cabeçalho
 
 # Idioma (28/09): todo texto da janela vem de TEXTS[LANG] via tr(); trocar a bandeira troca na hora (App.set_lang).
@@ -93,6 +93,8 @@ TEXTS = {
                         'e Buster. Fora da Fire Crest, o tiro Fire vira o item Fire Crest, que entra na pool; com a '
                         'Earth ele já começa transformado.',
         'x_head': 'Randomizar Head Butt',
+        'x_swap': 'Quick Swap (L/R)',
+        'x_swap_desc': 'Troca de crest sem pausar: dentro da fase, R passa pra próxima crest e L volta pra anterior, na ordem do menu, só entre as que você já tem. O tiro, o ícone da HUD e a gárgula trocam na hora. Funciona no chão, pulando, planando ou nadando.',
         'x_head_desc': 'A cabeçada vira item: só sai com o talismã Skull EQUIPADO, em qualquer forma (as gárgulas '
                        'Earth, Water e Air usam Cima + A). Sem a Skull nenhuma forma dá cabeçada, e o que pede '
                        'cabeçada (estátuas que só ela quebra, Hippogriff 1 etc.) passa a depender da Skull.',
@@ -129,7 +131,8 @@ TEXTS = {
         'anti_warn': 'Desativar o patch anti-softlock com a dificuldade 5 selecionada pode tornar a seed impossível '
                      'de finalizar. Desative por conta e risco.\n\nDesativar mesmo assim?',
         'on': 'ligado', 'off': 'desligado',
-        'info': '{m}\n\nDificuldade {v}: {d}\n\nObjetivo: {g}\n{a}: {s}\n{k}: {ks}\n{c}: {cs}\n{h}: {hs}',
+        'info': '{m}\n\nDificuldade {v}: {d}\n\nObjetivo: {g}\n{a}: {s}\n{k}: {ks}\n{c}: {cs}\n{h}: {hs}\n'
+                '{q}: {qs}',
         'skip': 'Skip Somulo',
         'skip_desc': 'Pula a luta do Somulo na abertura (que é praticamente uma cutscene): o jogo começa na área 1, '
                      'com o Somulo já vencido, e o item que ele soltaria aparece em cima do Firebrand.',
@@ -153,7 +156,7 @@ TEXTS = {
         'preset_save_bad': 'Não deu pra salvar o preset:\n{e}',
         'adv_names': {'preset': 'Preset', 'diff': 'Dificuldade', 'access': 'Acessibilidade', 'pool': 'Pool de Itens',
                       'density': 'Densidade', 'removal': 'Remoção de itens', 'hp': 'HP disponível',
-                      'goal': 'Objetivo', 'starter': 'Starter Crest', 'head': 'Randomizar Head Butt',
+                      'goal': 'Objetivo', 'starter': 'Starter Crest', 'head': 'Randomizar Head Butt', 'swap': 'Quick Swap (L/R)',
                       'somulo': 'Skip Somulo', 'level': 'Nível da lógica', 'anti': 'Anti-Softlock',
                       'prog': 'Progressão', 'pace': 'Ritmo', 'placement': 'Colocação',
                       'prio_strength': 'Intensidade', 'prio': 'Prioridade por item', 'early': 'Filler no início'},
@@ -200,6 +203,7 @@ TEXTS = {
                     'progressão (o Talismã fica preso na pool).\nRando: o gerador decide se randomiza ou não.',
             'somulo': 'Sim: pula a luta do Somulo na abertura; o jogo começa na área 1, com o Somulo já vencido e o '
                       'item dele em cima do Firebrand.\nNão: começa no Coliseu, como no jogo original.',
+            'swap': 'Sim: troca de crest sem pausar: dentro da fase, R passa pra próxima crest e L volta pra anterior, na ordem do menu, só entre as que você já tem. O tiro, o ícone da HUD e a gárgula trocam na hora. Funciona no chão, pulando, planando ou nadando.\nNão: trocar de crest só pelo menu, como no jogo original.',
             'prog': 'Como os itens se espalham pelas esferas (as "rodadas" do spoiler: o que dá pra pegar com o que '
                     'já se tem). Não mexe na Dificuldade: a lógica e as regras da Densidade continuam valendo por '
                     'cima destas opções.',
@@ -257,6 +261,8 @@ TEXTS = {
                         'and Buster. Other than Fire Crest, the Fire shot becomes the Fire Crest item, which goes into '
                         'the pool; with Earth he starts already transformed.',
         'x_head': 'Randomize Head Butt',
+        'x_swap': 'Quick Swap (L/R)',
+        'x_swap_desc': 'Crest switching without pausing: inside a stage, R goes to the next crest and L to the previous one, in menu order, only among the ones you already have. The shot, the HUD icon and the gargoyle change right away. Works on the ground, jumping, hovering or swimming.',
         'x_head_desc': 'The head butt becomes an item: it only works with the Skull talisman EQUIPPED, in any '
                        'form (the Earth, Water and Air gargoyles use Up + A). Without the Skull no form can head '
                        'butt, and whatever needs it (statues only it breaks, Hippogriff 1, etc.) depends on the '
@@ -293,7 +299,7 @@ TEXTS = {
         'anti_warn': 'Disabling the anti-softlock patch with difficulty 5 selected may make the seed impossible to '
                      'finish. Disable at your own risk.\n\nDisable anyway?',
         'on': 'on', 'off': 'off',
-        'info': '{m}\n\nDifficulty {v}: {d}\n\nGoal: {g}\n{a}: {s}\n{k}: {ks}\n{c}: {cs}\n{h}: {hs}',
+        'info': '{m}\n\nDifficulty {v}: {d}\n\nGoal: {g}\n{a}: {s}\n{k}: {ks}\n{c}: {cs}\n{h}: {hs}\n{q}: {qs}',
         'skip': 'Skip Somulo',
         'skip_desc': 'Skips the opening Somulo fight (it is basically a cutscene): the game starts in area 1 with '
                      'Somulo already beaten, and the item he would drop appears on top of Firebrand.',
@@ -317,7 +323,7 @@ TEXTS = {
         'preset_save_bad': "Couldn't save the preset:\n{e}",
         'adv_names': {'preset': 'Preset', 'diff': 'Difficulty', 'access': 'Accessibility', 'pool': 'Item Pool',
                       'density': 'Density', 'removal': 'Item removal', 'hp': 'Available HP', 'goal': 'Goal',
-                      'starter': 'Starter Crest', 'head': 'Randomize Head Butt', 'somulo': 'Skip Somulo',
+                      'starter': 'Starter Crest', 'head': 'Randomize Head Butt', 'swap': 'Quick Swap (L/R)', 'somulo': 'Skip Somulo',
                       'level': 'Logic level', 'anti': 'Anti-Softlock', 'prog': 'Progression', 'pace': 'Pace',
                       'placement': 'Placement', 'prio_strength': 'Strength', 'prio': 'Item priority',
                       'early': 'Early filler items'},
@@ -365,6 +371,7 @@ TEXTS = {
                     'decides whether to randomize it.',
             'somulo': 'Yes: skips the opening Somulo fight; the game starts in area 1 with Somulo already beaten and '
                       'his item on top of Firebrand.\nNo: starts in the Colosseum, like the original game.',
+            'swap': 'Yes: crest switching without pausing: inside a stage, R goes to the next crest and L to the previous one, in menu order, only among the ones you already have. The shot, the HUD icon and the gargoyle change right away. Works on the ground, jumping, hovering or swimming.\nNo: crests only change through the menu, like the original game.',
             'prog': 'How items spread over the spheres (the spoiler "rounds": what you can get with what you '
                     'already have). It does not touch Difficulty: the logic and the Density rules still apply on top '
                     'of these options.',
@@ -424,12 +431,12 @@ def go_name(k, lang=None):
 # o mesmo resultado). As opções ficam no dcor_config.json ('adv') e um preset .json traz as mesmas chaves de
 # ADV_DEFAULT (pode vir solto ou dentro de {"name": ..., "advanced": {...}}).
 ADV_FIELDS = ('preset', 'diff', 'level', 'access', 'pool', 'density', 'removal', 'hp', 'goal', 'starter', 'head',
-              'somulo', 'anti')
+              'swap', 'somulo', 'anti')
 ADV_CHOICES = {'diff': ('1', '2', '3', '4', '5', 'custom'), 'level': ('1', '2', '3', '4', '5'),
                'access': ('all', 'vanilla', 'rando'),
                'removal': ('none', '2', '3', '4', 'rando'), 'hp': ('sparse', 'medium', 'full', 'rando'),
                'goal': tuple(GO_KEYS) + ('rando',), 'starter': ('vanilla', 'earth', 'buster', 'claw', 'rando'),
-               'head': ('no', 'yes', 'rando'), 'somulo': ('no', 'yes'), 'anti': ('no', 'yes'),
+               'head': ('no', 'yes', 'rando'), 'swap': ('no', 'yes'), 'somulo': ('no', 'yes'), 'anti': ('no', 'yes'),
                'pace': ('slow', 'uniform', 'fast'), 'placement': ('neutral', 'forced', 'local'),
                'prio_strength': ('moderate', 'strong')}
 # ainda sem ROM (Neitan, 02/10): na lista, travados "(em breve)". Acessibilidade Vanilla/Rando: desde a 0.3.2.
@@ -439,14 +446,15 @@ POOL_SOON = {'insanity'}                         # locais novos do modo Insano: 
 POOL_CLASSIC_EXTRA = [k for k in POOL_KEYS if k not in POOL_SOON]
 ADV_DEFAULT = {'preset': 'custom', 'diff': '3', 'level': '3', 'access': 'all', 'pool': POOL_CLASSIC_EXTRA,
                'pool_rando': False, 'density': 50, 'removal': 'none', 'hp': 'full', 'goal': 'vellum',
-               'starter': 'vanilla', 'head': 'no', 'somulo': 'no', 'anti': 'no',
+               'starter': 'vanilla', 'head': 'no', 'swap': 'yes', 'somulo': 'no', 'anti': 'no',
                'pace': 'uniform', 'placement': 'neutral', 'prio_strength': 'moderate', 'prio': {}, 'early': []}
 # Progressão estilo Map Rando (Neitan, 03/10): coluna própria no Avançado. Como o Nível da lógica, não faz parte da
 # Dificuldade 1-5 (mexer nela não troca a Dificuldade pra Custom). prio = {item: 'early'/'late'} (sem = Padrão);
 # early = itens do Filler no início (R.EARLY_ITEMS). O padrão gera as mesmas seeds de antes (testes/adv_ref.py).
 PROG_FIELDS = ('pace', 'placement', 'prio_strength')
 PRIO_STATES = ('default', 'early', 'late')
-ADV_OWN = {'level', 'pace', 'placement', 'prio_strength', 'prio', 'early'}     # não trocam a Dificuldade pra Custom
+ADV_OWN = {'level', 'pace', 'placement', 'prio_strength', 'prio', 'early', 'swap'}   # não trocam a Dificuldade
+# pra Custom (Quick Swap, 10/10: é controle, não mexe na seed)
 # Dificuldade 1-5 do Avançado = a da guia Simples no modo Clássico Extra, menos o Nível da lógica, que é separado
 # (Neitan, 03/10: dá pra Dificuldade 1 com Nível 5) (o objetivo fica como está; a 5 troca o
 # "4 crests" por 5 Vellums e liga o Anti-Softlock). Densidade: a ordem das dificuldades. HP: a 4 tira 5 dos 16
@@ -515,6 +523,7 @@ def adv_resolve(adv, seed, attempt=0):
     logic.min_spheres = ADV_MIN_SPHERES
     logic.pace, logic.placement, logic.prio_strength = adv['pace'], adv['placement'], adv['prio_strength']
     logic.priority, logic.early = dict(adv['prio']), tuple(adv['early'])
+    logic.quickswap = adv['swap'] == 'yes'
     return logic, {'pool': keys, 'hp': left, 'goal': goal, 'anti': anti, 'access': access, 'head': head}
 
 
@@ -1487,16 +1496,19 @@ def make_dirs(home=None):
         os.makedirs(os.path.join(home or HOME, d), exist_ok=True)
 
 
-def write_seed(text, van, mode, diff, go='vellum', anti=False, home=None, skip=False, crest=False, head=False):
+def write_seed(text, van, mode, diff, go='vellum', anti=False, home=None, skip=False, crest=False, head=False,
+               swap=True):
     """Gera e grava Seed/DemonRando - Nome.sfc e Spoiler/DemonRando - Nome.txt (mode = índice em MODE_KEYS, go = chave
     de GO_KEYS, anti = Anti-Softlock, skip = Skip Somulo, crest = crest inicial sorteada). Devolve o nome do arquivo. O
     spoiler sai sempre em inglês (29/09)."""
     name, seed = seed_from_name(text)
     hdr = (f"DCOR {VERSION} - {tr('modes', 'en')[mode]}, difficulty {diff}, Goal: {go_name(go, 'en')}, "
             f"{tr('anti', 'en')}: {'yes' if anti else 'no'}, Skip Somulo: {'yes' if skip else 'no'}, "
-            f"Random starting crest: {'yes' if crest else 'no'}, Head Butt as item: {'yes' if head else 'no'} "
+            f"Random starting crest: {'yes' if crest else 'no'}, Head Butt as item: {'yes' if head else 'no'}, "
+            f"Quick Swap: {'yes' if swap else 'no'} "
             f"(internal seed {seed})")
     logic = R.Logic(diff, MODE_KEYS[mode], go, anti, crest, skip, headbutt=head)
+    logic.quickswap = swap
     return save_seed(name, seed, R.build_seed(seed, van, logic), hdr, home)
 
 
@@ -1514,7 +1526,7 @@ def write_seed_adv(text, van, adv, home=None):
             f"accessibility: {tr('adv_values', 'en')[got['access']]}, item pool: {pools}, "
             f"available HP: {got['hp']}/{HP_TOTAL}, item removal: {rem}, Goal: {go_name(got['goal'], 'en')}, "
             f"Anti-Softlock: {'yes' if got['anti'] else 'no'}, Skip Somulo: {adv['somulo']}, "
-            f"Head Butt as item: {'yes' if got['head'] else 'no'}{prog_head(adv)} "
+            f"Head Butt as item: {'yes' if got['head'] else 'no'}, Quick Swap: {adv['swap']}{prog_head(adv)} "
             f"(internal seed {seed})")
     if res is None:
         raise RuntimeError(tr('no_fill_adv', n=name))
@@ -1659,6 +1671,7 @@ class App:
         self.skip_row.select(self.skip)
         self.crest_row.select(self.crest)
         self.head_row.select(self.head)
+        self.swap_row.select(self.swap)
         self.set_mode(self.mode)
         self.refresh_adv()
         self.set_tab(self.tab)
@@ -1735,6 +1748,9 @@ class App:
         self.head = bool(self.cfg.get('headbutt', False))
         self.head_row = extra(3, OptRow(X, '', 'x_head', self.toggle_head, box=True))
         Tip(self.head_row, lambda: tr('x_head_desc'))
+        self.swap = bool(self.cfg.get('quickswap', True))            # troca de crest com L/R (10/10)
+        self.swap_row = extra(4, OptRow(X, '', 'x_swap', self.toggle_swap, box=True))
+        Tip(self.swap_row, lambda: tr('x_swap_desc'))
         return S
 
     # --- guia Avançado (30/09): só interface por enquanto; as opções ficam salvas na config
@@ -2076,7 +2092,8 @@ class App:
 
     def save(self):
         self.cfg.update(lang=LANG, tab=self.tab, mode=self.mode, diff=self.diff.value, go=self.gomode,
-                        antisoftlock=self.anti, skipsomulo=self.skip, startcrest=self.crest, headbutt=self.head, adv=self.adv,
+                        antisoftlock=self.anti, skipsomulo=self.skip, startcrest=self.crest, headbutt=self.head,
+                        quickswap=self.swap, adv=self.adv,
                         presets=self.presets)
         save_config(self.cfg)
 
@@ -2103,6 +2120,7 @@ class App:
         self.skip_row.set_text(tr('skip'))
         self.crest_row.set_text(tr('x_crest'))
         self.head_row.set_text(tr('x_head'))
+        self.swap_row.set_text(tr('x_swap'))
         for r, k in self.soon_rows:
             r.set_text(tr(k), tr('soon'))
         for k, r in self.pool_rows.items():
@@ -2340,6 +2358,12 @@ class App:
         self.update_info()
         self.save()
 
+    def toggle_swap(self, _k):
+        self.swap = not self.swap
+        self.swap_row.select(self.swap)
+        self.update_info()
+        self.save()
+
     def toggle_skip(self, _k):
         self.skip = not self.skip
         self.skip_row.select(self.skip)
@@ -2365,7 +2389,8 @@ class App:
                                     a=tr('anti'), s=tr('on') if self.anti else tr('off'), k=tr('skip'),
                                     ks=tr('on') if self.skip else tr('off'), c=tr('x_crest'),
                                     cs=tr('on') if self.crest else tr('off'), h=tr('x_head'),
-                                    hs=tr('on') if self.head else tr('off')))
+                                    hs=tr('on') if self.head else tr('off'), q=tr('x_swap'),
+                                    qs=tr('on') if self.swap else tr('off')))
         self.go.set_enabled(mode_ok(self.mode) and not self.busy)
 
     def roll_seed(self):
@@ -2468,7 +2493,7 @@ class App:
             job = (write_seed_adv, name, van, json.loads(json.dumps(self.adv)))
         else:
             job = (write_seed, name, van, self.mode, self.diff.value, self.gomode, self.anti, None, self.skip,
-                   self.crest, self.head)
+                   self.crest, self.head, self.swap)
         threading.Thread(target=self.work, args=job, daemon=True).start()
         self.root.after(100, self.poll)
 
@@ -2495,13 +2520,13 @@ class App:
 def main():
     if '--seed' in sys.argv:        # sem janela (conferência):
         # "Demon's Crest Open Randomizer.exe" --seed "Nome Da Seed" [--modo limitado|classico|extra] [--dif 1-5]
-        #   [--go vellum|bosses|crests|hp] [--anti 1] [--skip 1] [--crest 1] [--head 1] [--home PASTA]
+        #   [--go vellum|bosses|crests|hp] [--anti 1] [--skip 1] [--crest 1] [--head 1] [--swap 0] [--home PASTA]
         a = dict(zip(sys.argv[1::2], sys.argv[2::2]))
         home = a.get('--home', HOME)
         mode = MODE_KEYS.index(a.get('--modo', 'extra'))
         write_seed(a['--seed'], find_rom(home)[0], mode, int(a.get('--dif', DEFAULT_DIFF)), a.get('--go', DEFAULT_GO),
                    a.get('--anti', '0') == '1', home, a.get('--skip', '0') == '1', a.get('--crest', '0') == '1',
-                   a.get('--head', '0') == '1')
+                   a.get('--head', '0') == '1', a.get('--swap', '1') == '1')
         return
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(1)                   # texto nítido em tela com escala

@@ -237,7 +237,7 @@ def merge_shared_screens(data, parsed):
 
 
 def write(vanilla, placement, rng, go='vellum', patches=(), start=None, skip_somulo=False, vanilla_access=False,
-          headbutt=False):
+          headbutt=False, quickswap=True):
     """Devolve (ROM 4 MB, ids por check). start = crest inicial sorteada (None = jogo original: Fire desde o início).
     skip_somulo = começa na área 1 com o Somulo vencido e o item dele (progress). vanilla_access = fases 5 e 6 só
     depois de STAGE56_BOSSES (progress, mapa). headbutt = cabeçada só com a Skull equipada (head_butt.py)."""
@@ -339,7 +339,7 @@ def write(vanilla, placement, rng, go='vellum', patches=(), start=None, skip_som
     # crest inicial Fire = jogo original (Fire desde o começo, sem a Fire Crest na pool): nenhum gancho
     write.fire_report = fire_crest.apply(rom, start) if start and start != 'Fire Crest' else []
     write.head_report = head_butt.apply(rom) if headbutt else []          # Head Butt como item (03/10)
-    code = boss_exit(rom, code, g, castle_req(go, ids), start, skip_somulo, vanilla_access, headbutt)
+    code = boss_exit(rom, code, g, castle_req(go, ids), start, skip_somulo, vanilla_access, headbutt, quickswap)
     rom.put(CODE, code)
     gfx_lines = insanity_gfx.apply(rom.b, vanilla, ids, skip_somulo)   # itens com gráfico/paleta próprios (BF:D600)
     fix_checksum(rom.b)
@@ -407,6 +407,10 @@ def somulo_spawn(code, at):
 # Select (borda, não segurar) deixa o HP na metade do atual (arredondado pra baixo) e entra no 0C com dano 0: com 1 de
 # HP vai a 0 e morre. Vários apertos pra morrer = proteção contra aperto sem querer. Só nos estados de controle
 # (chão 02, pulo 04, planar 06, nadar 14) e fora da piscada pós-dano ($103C = 0).
+# Só pra ROM de teste (Neitan, 09/10: "a seed de teste já me dá todos os itens"): jogo novo com as 8 crests, os 5
+# talismãs, os 5 vellums, a Fire Crest e HP máximo 20. Nunca ligado pelo gerador.
+TEST_ALL_ITEMS = False
+
 SELECT_PREV = 0x7E1F9A                 # Select no quadro anterior (borda)
 SELECT_CODE = 0xC48000                 # banco próprio: o C0 (CODE) não tem mais espaço antes da LOCBIT
 SELECT_STATES = (0x02, 0x04, 0x06, 0x14)
@@ -439,12 +443,131 @@ def select_kill(rom):
     return SELECT_CODE
 
 
+# Troca de crest com L/R (Neitan, 09/10): R avança e L volta na ordem do menu, só entre as crests que o jogador tem
+# (Infinity fora até ela existir no rando). Código = arma $1054 (o menu usa o mesmo número): Fire 00, Buster 02,
+# Tornado 04, Claw 06, Demon Fire 08, Ground 0A, Aerial 0C, Tidal 0E, Legendary 10. Posse = bit de $1E51 (84:938A);
+# Fire = sempre, ou FLAGS bit 0 com crest inicial. Grava como o menu (84:8DBE) e refaz o que o menu faz ao fechar
+# (84:8B70-8BBD), menos o envio de gráficos com a tela desligada (84:8E45): apaga os tiros (80:9AAA), recalcula as
+# habilidades (80:DF94), animação (84:8F2F), paletas (80:A579) e, se a forma mudou, gráficos e animação da forma
+# (80:D973 com Y = área*2, 84:8FD4). Tabelas do jogo no banco $81 (DB = $81). Mesmos estados do Select.
+# 09/10 (vídeo do Neitan: tiro e ícone da HUD ficavam da crest anterior): gráficos do tiro pela arma (80:F9B2, fila
+# de envio à VRAM $0500/$0081, como o menu) e ícones da HUD (84:83FD, mesma fila; o 84:83F9 antes dele zera o
+# objeto $12B0, por isso o índice do ícone $12E8 é calculado aqui como 84:8DE6 e devolvido depois):
+# forma normal = código; gárgula = 10 + $81:9C5A[forma/2]. A cor do ícone é o atributo de paleta no mapa da HUD
+# (80:C9A6: tiles 62/63/72/73, paleta = $81:9FBA[ícone/2] | 20; o mapa vai pra VRAM $5832, o ícone fica em $5873 e
+# $5893): reescrito aqui pela mesma fila (Neitan, 09/10: o ícone ficava com a cor do anterior).
+LR_CODE = 0xC48100
+LR_TMP = 0x7E1F9B                      # código novo; +1 passo (02 / FE); +2 forma nova; +3 forma antiga; +4 $12E8;
+                                       # +5 ícone novo
+LR_HUD = 0x7E1FA4                      # 8 B: os 4 tiles do ícone (62 63 / 72 73) com a paleta nova
+LR_FORMS = (0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x04, 0x02, 0x08)
+LR_OWN = (0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80)
+RTL_84 = 0x848DE5                      # um RTL no banco 84 (84:8DE2 JSR 8DE6 / RTL): volta das rotinas JSR de lá
+
+
+def crest_swap(rom, fire_item):
+    a = Asm(LR_CODE)
+    def call84(target, tag):           # rotina JSR do banco 84: PHK / PEA volta-1 / PEA RTL-1 / JML
+        a.op('PHK'); a.op('PEA', 'abs', tag); a.op('PEA', 'abs', (RTL_84 - 1) & 0xFFFF); a.op('JML', 'long', target)
+        a.label(tag); a.op('NOP')      # o RTL volta pro byte seguinte a este
+    a.op('PHP'); a.op('PHB'); a.op('PHD')
+    a.op('REP', 'imm8', 0x30); a.op('LDA', 'imm16', 0x0000); a.op('TCD'); a.op('SEP', 'imm8', 0x30)
+    a.op('LDA', 'long', 0x000094); a.op('AND', 'imm8', 0x30); a.br('BEQ', 'out_n')           # L 20 / R 10 (aperto)
+    a.op('AND', 'imm8', 0x10); a.br('BEQ', 'left')
+    a.op('LDA', 'imm8', 0x02); a.br('BRA', 'dir')
+    a.label('left'); a.op('LDA', 'imm8', 0xFE)
+    a.label('dir'); a.op('STA', 'long', LR_TMP + 1)
+    a.op('LDA', 'long', 0x7E1000); a.br('BEQ', 'out_n')                                     # Firebrand em cena
+    a.op('LDA', 'long', 0x7E1005)
+    for st in SELECT_STATES:
+        a.op('CMP', 'imm8', st); a.br('BEQ', 'ok')
+    a.label('out_n'); a.op('BRL', 'rell', 'out')
+    a.label('ok')
+    a.op('LDA', 'long', 0x7E1054); a.op('STA', 'long', LR_TMP)
+    a.op('LDY', 'imm8', 0x08)
+    a.label('loop')
+    a.op('LDA', 'long', LR_TMP); a.op('CLC'); a.op('ADC', 'long', LR_TMP + 1)
+    a.op('CMP', 'imm8', 0x12); a.br('BNE', 'w1'); a.op('LDA', 'imm8', 0x00)
+    a.label('w1'); a.op('CMP', 'imm8', 0xFE); a.br('BNE', 'w2'); a.op('LDA', 'imm8', 0x10)
+    a.label('w2'); a.op('STA', 'long', LR_TMP); a.op('TAX'); a.br('BNE', 'crest')
+    if fire_item:                                                                            # Fire = item (crest inicial)
+        a.op('LDA', 'long', fire_crest.FLAGS); a.op('AND', 'imm8', 0x01); a.br('BNE', 'found')
+        a.br('BRA', 'next')
+    else:
+        a.br('BRA', 'found')
+    a.label('crest')
+    a.op('LDA', 'long', 0x7E1E51); a.op('AND', 'longx', 'own'); a.br('BNE', 'found')
+    a.label('next'); a.op('DEY')
+    a.br('BNE', 'loop'); a.op('BRL', 'rell', 'out')
+    a.label('found')
+    a.op('LDA', 'long', LR_TMP); a.op('CMP', 'long', 0x7E1054); a.br('BNE', 'apply')
+    a.op('BRL', 'rell', 'out')                                                               # só tem esta
+    a.label('apply')
+    a.op('LDA', 'imm8', 0x81); a.op('PHA'); a.op('PLB')                                      # DB = $81 (tabelas do jogo)
+    a.op('JSL', 'long', 0x809AAA)                                                            # apaga os tiros
+    a.op('SEP', 'imm8', 0x30)
+    a.op('LDA', 'long', LR_TMP); a.op('TAX'); a.op('LDA', 'longx', 'forms'); a.op('STA', 'long', LR_TMP + 2)
+    a.op('LDA', 'long', 0x7E1002); a.op('STA', 'long', LR_TMP + 3)
+    a.op('LDA', 'long', LR_TMP + 2); a.op('STA', 'long', 0x7E1002)                         # como 84:8DBE
+    a.op('LDA', 'long', LR_TMP); a.op('STA', 'long', 0x7E1054); a.op('LSR', 'acc'); a.op('STA', 'long', 0x7E1038)
+    a.op('JSL', 'long', 0x80DF94)                                                            # habilidades da forma
+    a.op('SEP', 'imm8', 0x30)
+    a.op('JSL', 'long', 0x80F9B2)                                                            # gráficos do tiro
+    a.op('SEP', 'imm8', 0x30)
+    a.op('LDA', 'long', 0x7E12E8); a.op('STA', 'long', LR_TMP + 4)
+    a.op('LDA', 'long', LR_TMP + 2); a.br('BEQ', 'icon_n')
+    a.op('LSR', 'acc'); a.op('TAX'); a.op('LDA', 'longx', 0x819C5A); a.op('CLC'); a.op('ADC', 'imm8', 0x0A)
+    a.br('BRA', 'icon')
+    a.label('icon_n'); a.op('LDA', 'long', LR_TMP)
+    a.label('icon'); a.op('STA', 'long', 0x7E12E8); a.op('STA', 'long', LR_TMP + 5)
+    a.op('JSL', 'long', 0x8483FD)                                                            # ícones da HUD
+    a.op('SEP', 'imm8', 0x30)
+    a.op('LDA', 'long', LR_TMP + 4); a.op('STA', 'long', 0x7E12E8)
+    a.op('LDA', 'long', LR_TMP + 5); a.op('LSR', 'acc'); a.op('TAX')
+    a.op('LDA', 'longx', 0x819FBA); a.op('ORA', 'imm8', 0x20)                                 # paleta | prioridade
+    for k, t in enumerate((0x62, 0x63, 0x72, 0x73)):
+        a.op('STA', 'long', LR_HUD + 2 * k + 1)
+        a.op('PHA'); a.op('LDA', 'imm8', t); a.op('STA', 'long', LR_HUD + 2 * k); a.op('PLA')
+    a.op('LDA', 'long', 0x000081); a.op('TAX')                                              # fila de envio
+    for k, vram in enumerate((0x5873, 0x5893)):
+        e = 8 * k
+        a.op('LDA', 'imm8', 0x80); a.op('STA', 'absx', 0x0500 + e)
+        a.op('LDA', 'imm8', 0x7E); a.op('STA', 'absx', 0x0507 + e)
+        a.op('REP', 'imm8', 0x20)
+        a.op('LDA', 'imm16', vram); a.op('STA', 'absx', 0x0501 + e)
+        a.op('LDA', 'imm16', 0x0004); a.op('STA', 'absx', 0x0503 + e)
+        a.op('LDA', 'imm16', (LR_HUD + 4 * k) & 0xFFFF); a.op('STA', 'absx', 0x0505 + e)
+        a.op('SEP', 'imm8', 0x20)
+    a.op('TXA'); a.op('CLC'); a.op('ADC', 'imm8', 0x10); a.op('STA', 'long', 0x000081)
+    a.op('SEP', 'imm8', 0x30)
+    call84(0x848F2F, 'r_anim')                                                               # animação por forma/estado
+    a.op('SEP', 'imm8', 0x30)
+    a.op('JSL', 'long', 0x80A579)                                                            # paletas
+    a.op('SEP', 'imm8', 0x30)
+    a.op('LDA', 'long', LR_TMP + 2); a.op('CMP', 'long', LR_TMP + 3); a.br('BEQ', 'same')
+    a.op('LDA', 'long', 0x00008D); a.op('TAY'); a.op('JSL', 'long', 0x80D973)                # gráficos da forma
+    a.op('SEP', 'imm8', 0x30)
+    call84(0x848FD4, 'r_form')                                                               # animação da forma
+    a.label('same')
+    a.op('SEP', 'imm8', 0x30)
+    a.op('LDA', 'imm8', 0x1B); a.op('JSL', 'long', 0x80BD51)                                # som do menu
+    a.label('out')
+    a.op('PLD'); a.op('PLB'); a.op('PLP'); a.op('RTL')
+    a.label('own'); a.b += bytes(x for c in LR_OWN for x in (c, 0))                         # por código (par)
+    a.label('forms'); a.b += bytes(x for f in LR_FORMS for x in (f, 0))
+    b = a.resolve()
+    o = rom.off(LR_CODE)
+    assert not any(rom.b[o:o + len(b)]), 'banco $C4 (L/R) não está vazio'
+    rom.put(LR_CODE, b)
+    return LR_CODE
+
+
 def long3(a):
     return (a & 0xFF, a >> 8 & 0xFF, a >> 16)
 
 
 def boss_exit(rom, code, grewon_tramp, castle=None, start=None, skip_somulo=False, vanilla_access=False,
-              headbutt=False):
+              headbutt=False, quickswap=True):
     def here():
         return CODE + len(code)
 
@@ -499,8 +622,9 @@ def boss_exit(rom, code, grewon_tramp, castle=None, start=None, skip_somulo=Fals
     # vigia (fim do laço de objetos, A/X 16 bits)
     sp = somulo_spawn(code, here()) if skip_somulo else None
     sk = select_kill(rom)
+    lr = crest_swap(rom, bool(start and start != 'Fire Crest')) if quickswap else None   # opção Quick Swap
     w = here()
-    body = bytearray((0x22,) + long3(sk))                                            # JSL Select (dano de segurança)
+    body = bytearray((0x22,) + long3(sk) + ((0x22,) + long3(lr) if lr else ()))      # JSL Select / JSL L/R (crests)
     if sp:
         body += bytes((0x22,) + long3(sp))                                           # JSL item do Somulo
     body += bytes((0xA9, 0x00, 0x00, 0x5B))                                          # LDA #0 / TCD (como o original)
@@ -572,6 +696,10 @@ LOC_AREAS = {1: 0x0001,                    # Hippogriff 1
              23: 0x0040,                   # Arma 2
              26: 0x0080,                   # Holothurion
              27: 0x0100,                   # Crawler
+             59: 0x0100,                   # Crawler na 59 (10/10, live do amigo do Neitan: All Bosses sem castelo).
+                                           #   A 27 vira 59 (84:8A18) quando $7F:E002 != 0, e o jogo grava 1 nele
+                                           #   quando o Crawler APARECE (84:9888) e nunca zera: quem volta depois de
+                                           #   ver o Crawler luta na 59 (medido, lua/boss_play.lua com BP_E002=1)
              30: 0x0200,                   # Grewon
              36: 0x0400,                   # Arma 3
              17: 0x0800,                   # Somulo (cabeça)
@@ -680,7 +808,13 @@ def progress(rom, code, castle=None, start=None, skip_somulo=False, vanilla_acce
         a.op('SEP', 'imm8', 0x20)
         a.op('LDA', 'imm8', 0x02); a.op('STA', 'abs', 0x008D)                          # área 1
         a.op('LDA', 'imm8', 0x22); a.op('STA', 'abs', 0x0E56)                          # vindo da 17
-    a.op('PLP'); a.op('LDA', 'imm8', 0x04); a.op('STA', 'abs', 0x1E50); a.op('RTL')
+    if TEST_ALL_ITEMS:                         # ROM de teste (nunca nas seeds): jogo novo com tudo
+        a.op('SEP', 'imm8', 0x20)
+        a.op('LDA', 'imm8', 0xFF); a.op('STA', 'abs', 0x1E51)                          # 8 crests
+        a.op('LDA', 'imm8', 0xF8); a.op('STA', 'abs', 0x1E53)                          # 5 talismãs
+        a.op('LDA', 'imm8', 0x1F); a.op('STA', 'abs', 0x1E56)                          # 5 vellums
+        a.op('LDA', 'long', fire_crest.FLAGS); a.op('ORA', 'imm8', 0x01); a.op('STA', 'long', fire_crest.FLAGS)
+    a.op('PLP'); a.op('LDA', 'imm8', 20 if TEST_ALL_ITEMS else 0x04); a.op('STA', 'abs', 0x1E50); a.op('RTL')
     code += a.resolve()
     rom.expect(0x848906, bytes.fromhex('a9048d501e'))
     rom.put(0x848906, (0x22,) + long3(ng) + (0xEA,))

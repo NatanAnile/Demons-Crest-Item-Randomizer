@@ -1,4 +1,4 @@
-DEMON'S CREST OPEN RANDOMIZER (DCOR) - versão 0.3.2
+DEMON'S CREST OPEN RANDOMIZER (DCOR) - versão 0.3.4
 ==================================================
 
 (English version below.)
@@ -95,7 +95,9 @@ EXTRAS
   que ele soltaria aparece em cima do Firebrand.
 - Randomizar Crest inicial: o Firebrand começa com uma crest sorteada entre Fire Crest (o início original), Claw,
   Earth e Buster. Fora da Fire Crest, o tiro Fire vira o item Fire Crest; com a Earth ele já começa transformado.
-- Randomizar Head Butt: em breve. A cabeçada vira item; sem ela não se quebram estátuas nem janelas.
+- Randomizar Head Butt: a cabeçada só sai com o talismã Skull equipado, em qualquer forma (as gárgulas usam
+  Cima + A), e a Skull vira item de progressão.
+- Quick Swap (L/R): troca de crest sem pausar (ver abaixo). Ligado por padrão.
 
 
 GUIA AVANÇADO
@@ -113,7 +115,8 @@ spoiler diz o que saiu.
 - Densidade: 0 a 100, onde caem os itens fortes e o HP (mais alto = mais tarde e mais difícil).
 - Remoção de itens: Nenhuma, 2, 3, 4 ou Rando (2 a 4) entre Air Crest, Time Crest, Tornado e Demon Fire.
 - HP disponível: Sparse (6 a 10), Medium (11 a 15), Full (16) ou Rando. Os HP que saem viram 20G ou Refil HP.
-- Objetivo, Starter Crest (Vanilla, Earth, Buster, Claw, Rando), Skip Somulo e Anti-Softlock.
+- Objetivo, Starter Crest (Vanilla, Earth, Buster, Claw, Rando), Randomizar Head Butt, Quick Swap (L/R),
+  Skip Somulo e Anti-Softlock.
 - Randomizar Head Butt: a cabeçada só sai com o talismã Skull equipado (as gárgulas usam Cima + A); a
   Skull vira item de progressão. No Avançado: Não, Sim ou Rando.
 - Progressão (como os itens se espalham pelas esferas; inspirada no Map Rando de Super Metroid): Ritmo (Lento,
@@ -127,6 +130,8 @@ No Avançado a seed tem no mínimo 4 esferas (com pool pequena o jogo fica perto
 OUTROS AJUSTES QUE O DCOR FAZ NA ROM
 ------------------------------------
 - Cada item aparece com o próprio gráfico e a própria paleta, esteja onde estiver.
+- L e R dentro da fase (opção Quick Swap, ligada por padrão): trocam de crest sem pausar (R avança, L volta, na ordem do menu), só entre as que o
+  jogador tem. Tiro, ícone da HUD e gárgula trocam na hora. Funciona no chão, pulando, planando ou nadando.
 - Select dentro da fase: tira metade do HP atual a cada aperto; com 1 de HP, o próximo aperto mata o Firebrand e
   aparece a tela de morte (Retry, Select a Stage, End). Serve pra sair de um lugar onde ficou preso. Só no chão,
   pulando, planando ou nadando, e não durante a piscada depois de um dano.
@@ -174,7 +179,7 @@ Demon's Crest é da Capcom. Este é um projeto de fã, sem fins lucrativos, e n�
 
 
 ==================================================
-DEMON'S CREST OPEN RANDOMIZER (DCOR) - version 0.3.2
+DEMON'S CREST OPEN RANDOMIZER (DCOR) - version 0.3.4
 ==================================================
 
 
@@ -271,7 +276,9 @@ EXTRAS
   he would drop appears on top of Firebrand.
 - Randomize starting Crest: Firebrand starts with a crest rolled among Fire Crest (the original start), Claw,
   Earth and Buster. Other than Fire Crest, the Fire shot becomes the Fire Crest item; with Earth he starts transformed.
-- Randomize Head Butt: coming soon. The head butt becomes an item; without it you cannot break statues or windows.
+- Randomize Head Butt: the head butt only works with the Skull talisman equipped, in any form (gargoyles use
+  Up + A), and the Skull becomes a progression item.
+- Quick Swap (L/R): crest switching without pausing (see below). On by default.
 
 
 ADVANCED TAB
@@ -289,7 +296,8 @@ header tells what came out.
 - Density: 0 to 100, where strong items and HP land (higher = later and harder).
 - Item removal: None, 2, 3, 4 or Rando (2 to 4) among Air Crest, Time Crest, Tornado and Demon Fire.
 - Available HP: Sparse (6 to 10), Medium (11 to 15), Full (16) or Rando. Removed HP become 20G or HP Refill.
-- Goal, Starter Crest (Vanilla, Earth, Buster, Claw, Rando), Skip Somulo and Anti-Softlock.
+- Goal, Starter Crest (Vanilla, Earth, Buster, Claw, Rando), Randomize Head Butt, Quick Swap (L/R),
+  Skip Somulo and Anti-Softlock.
 - Randomize Head Butt: the head butt only works with the Skull talisman equipped (the gargoyles use Up
   + A); the Skull becomes a progression item. On the Advanced tab: No, Yes or Rando.
 - Progression (how items spread over the spheres; inspired by the Super Metroid Map Rando): Pace (Slow, Uniform,
@@ -303,6 +311,8 @@ On the Advanced tab a seed has at least 4 spheres (with a small pool the game st
 OTHER CHANGES DCOR MAKES TO THE ROM
 -----------------------------------
 - Every item shows up with its own graphics and its own palette, wherever it is.
+- L and R inside a stage (Quick Swap option, on by default): switch crests without pausing (R forward, L back, in menu order), only among the ones
+  you have. Shot, HUD icon and gargoyle change right away. Works on the ground, jumping, hovering or swimming.
 - Select inside a stage: each press takes half of the current HP; at 1 HP, the next press kills Firebrand and the
   death screen shows up (Retry, Select a Stage, End). Use it to get out of a place where you got stuck. Only on the
   ground, jumping, hovering or swimming, and not during the blinking after a hit.
